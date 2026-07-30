@@ -32,9 +32,10 @@ e peça ao usuário. O time é a rede de segurança do dev, não substitui o pla
 
 ## Entrada
 
-Invocação: `/dev-team-orchestration:run <caminho-do-plano>` (o Claude Code sempre prefixa
-comando de plugin com o nome do plugin), ou em **linguagem natural** ("roda o time nesse plano:
-`<caminho>`") — a skill também dispara pela descrição. O plano vem da
+Invocação: `/dev-team-orchestration:run <caminho-do-plano>` (só existe quando instalado como
+**plugin** — o Claude Code sempre prefixa comando de plugin com o nome do plugin), ou em
+**linguagem natural** ("roda o time nesse plano: `<caminho>`") — a skill também dispara pela
+descrição, então no modo skill-avulsa use a linguagem natural. O plano vem da
 `superpowers:writing-plans`, tipicamente a partir de um brainstorming/planejamento prévio.
 
 ## Roster e modelo por papel (passe no parâmetro `model` do dispatch)

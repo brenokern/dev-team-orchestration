@@ -1,8 +1,14 @@
 # dev-team-orchestration
 
-Skill de Claude Code que orquestra um **time de subagents estagiários** para executar um
-**plano de implementação já escrito** no monorepo (NestJS + Next.js + Prisma
+Plugin de Claude Code (skill + comando `/run`) que orquestra um **time de subagents estagiários**
+para executar um **plano de implementação já escrito** no monorepo (NestJS + Next.js + Prisma
 multi-tenant), camada por camada, com revisão, testes e teste de UI/UX.
+
+> **Skill ou plugin?** O coração é a **skill** `dev-team-orchestration`, que é **autocontida**:
+> os estagiários são arquivos de prompt em `references/agents/*.md` despachados via a ferramenta
+> `Agent` genérica — **não** são subagents registrados do Claude Code. Por isso não existe pasta
+> `agents/` no topo. O plugin só adiciona, por cima da skill, o slash command `/dev-team-orchestration:run`.
+> Instalar só a skill (Opção B) não perde nenhum estagiário — perde apenas esse atalho de comando.
 
 A sessão principal do Claude Code vira **Team Leader** e despacha, na ordem
 `infra → dados → backend → ai → frontend`, um estagiário por camada — com um **reviewer** entre
@@ -13,7 +19,7 @@ Agents SDK (TS)** sobre Bedrock, seguindo as premissas do Strands e do `claude-c
 
 ## Instalação
 
-### Opção A — marketplace de plugin (traz skill + agentes)
+### Opção A — marketplace de plugin (skill + comando `/run`)
 
 No Claude Code:
 
@@ -37,7 +43,9 @@ npx skills add https://github.com/brenokern/dev-team-orchestration --skill dev-t
 ```
 
 Baixa `skills/dev-team-orchestration/SKILL.md` (+ `references/`) para o seu `.claude/skills`.
-Requer o repo acessível (público, ou git autenticado se privado).
+Requer o repo acessível (público, ou git autenticado se privado). Você não terá o comando
+`/dev-team-orchestration:run` (ele é do plugin), mas a skill dispara por linguagem natural — ver
+"Como usar".
 
 ## Como usar
 
@@ -97,11 +105,14 @@ grandes, peça "atualiza os padrões da dev-team-orchestration" (rotina em `refe
 .claude-plugin/
   marketplace.json        # catálogo (1 plugin, source ".")
   plugin.json             # manifesto do plugin
+commands/
+  run.md                  # slash command /dev-team-orchestration:run (só no modo plugin)
 skills/
   dev-team-orchestration/
-    SKILL.md              # playbook do Team Leader
+    SKILL.md              # playbook do Team Leader (skill autocontida)
     references/
-      agents/*.md         # os 8 estagiários
+      agents/*.md         # 9 prompts de estagiário (infra, data, backend, ai, frontend,
+                          #   qa, ux, reviewer, pr-writer) — despachados via ferramenta Agent
       patterns/*.md       # premissas derivadas do repo
       safety-and-git.md · pixel-agents.md · REFRESH.md
 ```
