@@ -1,0 +1,16 @@
+{
+  "name": "dev-team-orchestration",
+  "version": "0.1.0",
+  "description": "Instalador da skill dev-team-orchestration para Claude Code.",
+  "bin": {
+    "dev-team-orchestration": "bin/install.js"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "commands",
+    ".claude-plugin"
+  ],
+  "license": "MIT",
+  "author": "Breno Kern <breno.kern@hotmail.com>"
+}

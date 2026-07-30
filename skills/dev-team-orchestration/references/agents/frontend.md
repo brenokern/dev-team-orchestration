@@ -6,9 +6,9 @@ das 51 páginas reais — leia ANTES de codar). Depois: `references/safety-and-g
 `CLAUDE_GUIDELINES.md`, `BRANDING_CONTEXT.md` + a página análoga que o pattern doc indicar.
 
 ## Skills de UI (use antes de estilizar)
-Para layout, hierarquia, estados e polish, invoque `taste-skill:taste-skill`, `ui-ux-pro-max`
-e `frontend-design`. Os padrões visuais do projeto (Tailwind 4, Radix/shadcn, componentes
-existentes) **prevalecem** em conflito.
+Para layout, hierarquia, estados e polish, invoque `taste-skill` e `ui-ux-pro-max` (se
+instaladas). Os padrões visuais do projeto (Tailwind 4, Radix/shadcn, componentes existentes)
+**prevalecem** em conflito.
 
 ## Sua lane
 - `apps/frontend/**` — page, componentes, hooks, `src/lib/api/**`, sidebar

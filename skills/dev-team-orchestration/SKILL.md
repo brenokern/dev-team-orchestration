@@ -19,9 +19,10 @@ um time de especialistas (subagents) para transformar um **plano de implementaç
 em uma feature entregue, testada, revisada e commitada localmente — pronta pra você abrir o PR.
 
 O Leader é a sessão principal (seu único login). Os especialistas são despachados **via a
-ferramenta Agent**, um por vez, na ordem das camadas. Cada dispatch vira um subagent real —
-o que também faz cada um aparecer como personagem no **Pixel Agents** (ver
-`references/pixel-agents.md`).
+ferramenta Agent**. As camadas rodam em ordem (sequenciais entre si), mas tarefas
+**independentes dentro de uma mesma camada** podem ser despachadas em paralelo (ver o passo 3
+do fluxo). Cada dispatch vira um subagent real — o que também faz cada um aparecer como
+personagem no **Pixel Agents** (ver `references/pixel-agents.md`).
 
 <HARD-GATE>
 NÃO comece a implementar sem: (1) estar numa branch `feature/*` (nunca `main`/`develop`/
@@ -31,9 +32,10 @@ e peça ao usuário. O time é a rede de segurança do dev, não substitui o pla
 
 ## Entrada
 
-Invocação: `/dev-team-orchestration <caminho-do-plano>` (ou o usuário aponta o plano em
-linguagem natural). O plano vem da `superpowers:writing-plans`, tipicamente a partir de um
-brainstorming/planejamento prévio.
+Invocação: `/dev-team-orchestration:run <caminho-do-plano>` (o Claude Code sempre prefixa
+comando de plugin com o nome do plugin), ou em **linguagem natural** ("roda o time nesse plano:
+`<caminho>`") — a skill também dispara pela descrição. O plano vem da
+`superpowers:writing-plans`, tipicamente a partir de um brainstorming/planejamento prévio.
 
 ## Roster e modelo por papel (passe no parâmetro `model` do dispatch)
 
@@ -68,20 +70,35 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
 - A partir do plano, decida QUAIS camadas entram (nem todo plano tem infra ou frontend).
 
 ### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → frontend`:
-1. Anuncie no terminal: `▶ Camada <X> — despachando <x>-intern`.
-2. Despache o especialista via a ferramenta **Agent**:
-   - `subagent_type`: `general-purpose`
-   - `model`: conforme a tabela do roster
-   - `description`: curto e legível (ex.: "backend-intern: módulo notas-quali") — o Pixel
-     Agents mostra isso.
-   - `prompt`: o conteúdo de `references/agents/<x>.md` + o trecho do plano daquela camada +
-     o resumo do que as camadas anteriores entregaram (contratos: nomes de tabela/coluna,
-     rotas, DTOs, tipos).
-3. O especialista implementa e faz **commit local** da sua camada. Recebe de volta um relatório
-   estruturado (o que fez, arquivos, o commit, e o que a próxima camada precisa saber).
-4. **Gate de revisão:** despache `reviewer-intern` (opus, read-only) no diff daquela camada.
+
+**As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). O que
+pode ser paralelo é o trabalho DENTRO de uma camada, quando o plano tem tarefas independentes.
+
+1. Anuncie no terminal: `▶ Camada <X>`.
+2. **Decomponha a camada em tarefas** a partir do plano e classifique se são **independentes**.
+   Duas tarefas da mesma camada são independentes SOMENTE se TODAS forem verdade:
+   - **arquivos disjuntos** — nenhum arquivo em comum (nem `app.module.ts`, `app-sidebar.tsx`,
+     um mesmo model, um mesmo arquivo de api compartilhado, etc.);
+   - **sem dependência de contrato entre elas** — uma não consome DTO/rota/tabela que a outra
+     ainda vai criar;
+   - **mesmo papel/agente** (ex.: dois módulos de backend distintos = dois `backend-intern`).
+   Na menor dúvida, trate como **dependentes** (sequencial). Colisão de arquivo é pior que
+   lentidão.
+3. **Despache:**
+   - **Independentes (2+):** dispare todos os `Agent` do lote **numa única mensagem** (é o que
+     faz o Claude Code rodar em paralelo — e o que enche o escritório do Pixel Agents). Cada um:
+     `subagent_type: general-purpose`, `model` conforme o roster, `description` curto/legível
+     (ex.: "backend-intern: módulo tarefas"), `prompt` = `references/agents/<x>.md` + o trecho
+     do plano DAQUELA tarefa + os contratos das camadas anteriores. Nunca coloque duas tarefas
+     que tocam o mesmo arquivo no mesmo lote.
+   - **Dependentes ou tarefa única:** despache uma de cada vez, na ordem que o contrato exige.
+4. Cada especialista implementa e faz **commit local** da sua parte, e devolve o relatório
+   estruturado (o que fez, arquivos, o commit, contrato pra próxima camada). Um commit por
+   tarefa (não misture duas tarefas paralelas no mesmo commit).
+5. **Gate de revisão:** quando a camada inteira terminou (todo o lote paralelo + as
+   sequenciais), despache `reviewer-intern` (opus, read-only) no diff da camada.
    - Reviewer aprova → siga pra próxima camada.
-   - Reviewer aponta problemas → re-despache o MESMO especialista com o feedback; repita até
+   - Reviewer aponta problemas → re-despache o dono da tarefa culpada com o feedback; repita até
      aprovar. Não avance com pendência.
 
 ### N+1. QA
@@ -110,7 +127,7 @@ UX, e o TLDR do PR. Lembre que **nada foi enviado ao remoto** e que a **migratio
 aguarda ele revisar e aplicar**.
 
 ## Reuso de skills pelos especialistas
-- `frontend-intern` → `taste-skill:taste-skill`, `ui-ux-pro-max`, `frontend-design` para UI.
+- `frontend-intern` → `taste-skill`, `ui-ux-pro-max` para UI (se instaladas).
 - `ux-intern` → `design:design-critique`, `design:accessibility-review`, `ui-ux-pro-max`.
 - `reviewer-intern` → `engineering:code-review`.
 - `ponytail` está ativo globalmente → todos priorizam reuso e diff mínimo.

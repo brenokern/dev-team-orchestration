@@ -9,42 +9,70 @@ A sessão principal do Claude Code vira **Team Leader** e despacha, na ordem
 camada, **QA** (lint/test/build), **ux** (Playwright + acessibilidade) e um **pr-writer** que
 gera o TLDR do PR. Tudo com commit local, **sem push** e **sem aplicar migration**.
 
-## Instalação (marketplace de plugin)
+## Instalação
+
+### Opção A — marketplace de plugin (traz skill + agentes)
 
 No Claude Code:
 
 ```
-/plugin marketplace add brenokern/<nome-do-repo>
-/plugin install dev-team-orchestration@breno-dev-team
+/plugin marketplace add brenokern/dev-team-orchestration
+/plugin install dev-team-orchestration@breno
 ```
 
-- `brenokern/<nome-do-repo>` é este repositório no GitHub.
-- `breno-dev-team` é o nome do marketplace (campo `name` em `.claude-plugin/marketplace.json`).
-- Atualizar depois de mudanças: `/plugin marketplace update breno-dev-team`.
+- `brenokern/dev-team-orchestration` é este repositório no GitHub.
+- `breno` é o nome do marketplace (campo `name` em `.claude-plugin/marketplace.json`).
+- Atualizar depois de mudanças: `/plugin marketplace update breno`.
+- Repo privado? Adicione por caminho local: `/plugin marketplace add ~/Desktop/dev-team-orchestration`.
 
-Alternativa sem marketplace (uso pessoal rápido): copie `skills/dev-team-orchestration/` para
-`~/.claude/skills/` (vale em todo projeto) ou para `.claude/skills/` do projeto.
+### Opção B — CLI de skills (instala só a skill)
+
+Usa o CLI da comunidade `skills` (o mesmo `npx skills add ...` que outras skills usam pra
+instalar a partir de um repo):
+
+```
+npx skills add https://github.com/brenokern/dev-team-orchestration --skill dev-team-orchestration --agent claude-code
+```
+
+Baixa `skills/dev-team-orchestration/SKILL.md` (+ `references/`) para o seu `.claude/skills`.
+Requer o repo acessível (público, ou git autenticado se privado).
 
 ## Como usar
 
 Numa branch `feature/*`, com um plano de implementação já escrito:
 
 ```
-/dev-team-orchestration caminho/do/plano.md
+/dev-team-orchestration:run caminho/do/plano.md
 ```
 
-ou em linguagem natural: "roda o time nesse plano". O Leader confirma branch + plano e conduz
-o fluxo até entregar a feature com commits locais e o TLDR do PR pronto pra você abrir.
+ou em linguagem natural: "roda o time nesse plano: `caminho/do/plano.md`". O Leader confirma
+branch + plano e conduz o fluxo até entregar a feature com commits locais e o TLDR do PR pronto
+pra você abrir.
 
-## Pré-requisitos (skills que os estagiários reutilizam)
+> **Sobre o `:run`:** o Claude Code **sempre** prefixa comando de plugin com o nome do plugin
+> (`/plugin:comando`), então não dá pra ter um `/dev-team-orchestration` puro — o comando é
+> `/dev-team-orchestration:run`. Se preferir, ignore o slash e use linguagem natural.
 
-Instale também, senão alguns papéis rodam degradados:
+## Skills companheiras (instale para o time render 100%)
 
-- `ponytail` — diff mínimo / anti over-engineering (global)
-- `taste-skill`, `ui-ux-pro-max`, `frontend-design` — usadas pelo `frontend-intern`
-- `design:design-critique`, `design:accessibility-review` — usadas pelo `ux-intern`
-- `engineering:code-review` — usada pelo `reviewer-intern`
-- `superpowers:brainstorming` + `superpowers:writing-plans` — upstream: geram o plano que esta skill executa
+Os estagiários reutilizam skills abertas; sem elas alguns papéis rodam degradados (mas rodam):
+
+- **superpowers** — upstream que gera o plano (brainstorming → writing-plans).
+  `github.com/obra/superpowers-marketplace` →
+  `/plugin marketplace add obra/superpowers-marketplace` · `/plugin install superpowers@superpowers-marketplace`
+- **ponytail** — diff mínimo / anti over-engineering (global).
+  `github.com/DietrichGebert/ponytail` →
+  `/plugin marketplace add DietrichGebert/ponytail` · `/plugin install ponytail@ponytail`
+- **taste-skill** — taste de frontend (usada pelo `frontend-intern`).
+  `github.com/Leonxlnx/taste-skill` →
+  `npx skills add https://github.com/Leonxlnx/taste-skill --skill design-taste-frontend`
+- **ui-ux-pro-max** — inteligência de UI/UX (frontend-intern e ux-intern).
+  `github.com/nextlevelbuilder/ui-ux-pro-max-skill` →
+  `/plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill` · `/plugin install ui-ux-pro-max@ui-ux-pro-max-skill`
+- **code review / design critique / acessibilidade** — usadas pelo `reviewer-intern` e
+  `ux-intern`. Se você tiver os pacotes **Engineering** e **Design** do Claude Code
+  (`engineering:code-review`, `design:design-critique`, `design:accessibility-review`), o time
+  os usa; senão, esses agentes fazem review/UX sem skill dedicada.
 
 Para o `ux-intern`: Playwright é adicionado como devDependency do front na primeira execução, e
 o teste precisa de usuário de seed por papel (ADMIN/INDIVIDUAL) — ver

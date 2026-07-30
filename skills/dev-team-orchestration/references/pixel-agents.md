@@ -25,15 +25,18 @@ Para o time "conversar bem" com o Pixel Agents, esta skill já segue as três co
 3. **Descrição legível por dispatch.** O Leader passa um `description` curto
    (`frontend-intern: página notas-quali`) para você identificar cada personagem no escritório.
 
-### Como fica com execução sequenciada
-Como o time roda **camada por camada**, os personagens **acendem em turnos**: o data-intern
-trabalha e senta, o backend-intern entra, depois o frontend-intern, com o reviewer-intern
-aparecendo entre cada camada. Você vê a passagem de bastão, não o escritório inteiro digitando
-ao mesmo tempo.
+### Como fica a execução
+As **camadas** rodam em turnos (data → backend → frontend, com o reviewer-intern entre elas):
+enquanto uma camada trabalha, o Leader fica ocioso (em pé) esperando o subagent — isso é normal,
+o dispatch é síncrono.
 
-Se um dia quiser o escritório cheio em paralelo, o caminho é despachar camadas independentes em
-git worktrees isolados (uma sessão por worktree) — cada uma vira um personagem simultâneo. Fica
-como upgrade; não é o modo padrão porque as camadas do projeto dependem umas das outras.
+Quando o plano tem **tarefas independentes na mesma camada**, o Leader dispara o lote em
+paralelo (vários `Agent` numa mensagem só) — aí você vê **vários personagens digitando ao mesmo
+tempo**. Sem tarefas independentes, é um personagem por vez.
+
+Pro escritório cheio de forma mais agressiva (várias camadas simultâneas), o caminho é git
+worktrees isolados (uma sessão por worktree) — fica como upgrade; não é o padrão porque as
+camadas dependem umas das outras.
 
 ## Setup do Pixel Agents (uma vez)
 Instale a extensão "Pixel Agents" (pablodelucca) pelo Marketplace do VS Code ou Open VSX. Ela

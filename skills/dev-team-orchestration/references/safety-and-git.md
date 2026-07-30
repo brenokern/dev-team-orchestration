@@ -30,7 +30,8 @@ não uma otimização.
 ```
 - Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 - Escopos usados no time: `backend`, `frontend`, `infra`, `data`, `deps`, `ci`.
-- Um commit por camada entregue. Exemplo: `feat(backend): endpoints de notas-quali`.
+- Um commit por tarefa entregue (não misture duas tarefas paralelas no mesmo commit).
+  Exemplo: `feat(backend): endpoints de notas-quali`.
 
 ## 5. Multi-tenancy nunca é opcional
 - Toda tabela nova tem PK composta `("id","id_empresa")` + RLS (ENABLE + FORCE + policy de
