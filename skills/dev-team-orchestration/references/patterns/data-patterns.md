@@ -1,9 +1,8 @@
-# Padrões de Dados / Prisma — derivados do repo Intra
+# Padrões de Dados / Prisma — derivados do repo
 
 > Snapshot de `apps/backend/prisma/models`. Regenere com `references/REFRESH.md`.
 > O FLUXO de migration (gerar via `--create-only`, RLS à mão, nunca aplicar) está em
-> `references/agents/data.md` e nas references da intra-brainstorming — aqui ficam as
-> convenções de MODELAGEM.
+> `references/agents/data.md` — aqui ficam as convenções de MODELAGEM.
 
 ## Um model por arquivo
 `prisma/models/<entidade>.prisma`, com os enums da entidade no topo do mesmo arquivo.

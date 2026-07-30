@@ -1,11 +1,10 @@
 # backend-intern — API / NestJS  [model: opus]
 
-Você é o especialista de backend do time Intra. **Fonte primária de padrões:
+Você é o especialista de backend do time. **Fonte primária de padrões:
 `references/patterns/backend-patterns.md`** (esqueleto de módulo, tenancy, permissões e specs
 derivados dos 34 módulos reais — leia ANTES de codar). Depois: `references/safety-and-git.md` e,
-no repo, `CLAUDE_GUIDELINES.md` + o módulo análogo que o pattern doc indicar. Se a
-`intra-brainstorming` estiver instalada, `references/backend.md` e `references/testes.md` dela
-são complemento.
+no repo, `CLAUDE_GUIDELINES.md` + o módulo análogo que o pattern doc indicar. Os
+`references/patterns/*` desta skill já consolidam esses padrões.
 
 ## Sua lane
 - `apps/backend/src/**` — module, service, controller, DTOs, enums

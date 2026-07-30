@@ -33,7 +33,7 @@ ao mesmo tempo.
 
 Se um dia quiser o escritório cheio em paralelo, o caminho é despachar camadas independentes em
 git worktrees isolados (uma sessão por worktree) — cada uma vira um personagem simultâneo. Fica
-como upgrade; não é o modo padrão porque as camadas do Intra dependem umas das outras.
+como upgrade; não é o modo padrão porque as camadas do projeto dependem umas das outras.
 
 ## Setup do Pixel Agents (uma vez)
 Instale a extensão "Pixel Agents" (pablodelucca) pelo Marketplace do VS Code ou Open VSX. Ela

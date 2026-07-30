@@ -1,14 +1,15 @@
 ---
 name: dev-team-orchestration
 description: >
-  Orquestra um time de subagents especializados no monorepo Intra (NestJS + Next.js + Prisma
+  Orquestra um time de subagents especializados no monorepo (NestJS + Next.js + Prisma
   multi-tenant) para EXECUTAR um plano de implementação já escrito. A sessão principal vira
   Team Leader e roda o time camada por camada — infra → dados → backend → frontend — com revisão
   entre cada camada, testes, teste de UI/UX com Playwright, commits locais (sem push) e um TLDR
   de PR no final. Use SEMPRE que o Breno pedir para "rodar o time", "orquestrar o time",
   "executar/tocar o plano com o time", "chamar os agentes", "/dev-team-orchestration", ou apontar
   um plano de implementação numa branch feature/ para o time desenvolver. NÃO use para desenhar a
-  feature (isso é a intra-brainstorming) — esta skill assume que o plano já existe.
+  feature (isso é um passo de brainstorming/planejamento anterior) — esta skill assume que o
+  plano já existe.
 ---
 
 # dev-team-orchestration — executa um plano com um time de subagents
@@ -31,8 +32,8 @@ e peça ao usuário. O time é a rede de segurança do dev, não substitui o pla
 ## Entrada
 
 Invocação: `/dev-team-orchestration <caminho-do-plano>` (ou o usuário aponta o plano em
-linguagem natural). O plano vem da `superpowers:writing-plans`, tipicamente descendente da
-`intra-brainstorming`.
+linguagem natural). O plano vem da `superpowers:writing-plans`, tipicamente a partir de um
+brainstorming/planejamento prévio.
 
 ## Roster e modelo por papel (passe no parâmetro `model` do dispatch)
 
@@ -115,7 +116,7 @@ aguarda ele revisar e aplicar**.
 - `ponytail` está ativo globalmente → todos priorizam reuso e diff mínimo.
 
 ## Padrões do repo (o que torna o time excelente)
-`references/patterns/*` são as **premissas derivadas do código real** do Intra (51 páginas,
+`references/patterns/*` são as **premissas derivadas do código real** do projeto (51 páginas,
 34 módulos, 3.533 commits minerados). Cada especialista lê o seu como fonte primária:
 - `patterns/frontend-patterns.md` · `patterns/backend-patterns.md` ·
   `patterns/data-patterns.md` · `patterns/git-conventions.md`

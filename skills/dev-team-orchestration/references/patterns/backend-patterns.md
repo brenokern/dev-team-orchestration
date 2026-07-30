@@ -1,4 +1,4 @@
-# Padrões de Backend — derivados do repo Intra
+# Padrões de Backend — derivados do repo
 
 > Snapshot de `apps/backend/src` (34 módulos de feature, 74 `.module.ts` contando submódulos,
 > 157 specs). Regenere com `references/REFRESH.md`.
@@ -47,7 +47,7 @@ export class TaskController {
   (`ids_responsaveis`, `ids_seguidores`, `ids_tags`) e o service faz o split. Siga o padrão do
   módulo análogo em vez de inventar array.
 
-## Testes (obrigatório em módulo novo — ver testes.md da intra-brainstorming se instalada)
+## Testes (obrigatório em módulo novo)
 - `*.spec.ts` de service e de controller ao lado do arquivo (Jest + `@nestjs/testing`).
 - Cobrir: caminho feliz (create com `nanoid32`, update/delete por `id_id_empresa`),
   `NotFoundException` fora do tenant, regras de negócio, comportamento de erro.

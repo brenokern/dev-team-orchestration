@@ -1,7 +1,7 @@
 # dev-team-orchestration
 
 Skill de Claude Code que orquestra um **time de subagents estagiários** para executar um
-**plano de implementação já escrito** no monorepo **Intra** (NestJS + Next.js + Prisma
+**plano de implementação já escrito** no monorepo (NestJS + Next.js + Prisma
 multi-tenant), camada por camada, com revisão, testes e teste de UI/UX.
 
 A sessão principal do Claude Code vira **Team Leader** e despacha, na ordem
@@ -44,7 +44,7 @@ Instale também, senão alguns papéis rodam degradados:
 - `taste-skill`, `ui-ux-pro-max`, `frontend-design` — usadas pelo `frontend-intern`
 - `design:design-critique`, `design:accessibility-review` — usadas pelo `ux-intern`
 - `engineering:code-review` — usada pelo `reviewer-intern`
-- `intra-brainstorming` — upstream: gera o plano que esta skill executa
+- `superpowers:brainstorming` + `superpowers:writing-plans` — upstream: geram o plano que esta skill executa
 
 Para o `ux-intern`: Playwright é adicionado como devDependency do front na primeira execução, e
 o teste precisa de usuário de seed por papel (ADMIN/INDIVIDUAL) — ver
@@ -58,7 +58,7 @@ personagem. Detalhes em `references/pixel-agents.md`.
 
 ## Manutenção
 
-Os padrões em `references/patterns/*` são um snapshot do código do Intra. Depois de mudanças
+Os padrões em `references/patterns/*` são um snapshot do código do projeto. Depois de mudanças
 grandes, peça "atualiza os padrões da dev-team-orchestration" (rotina em `references/REFRESH.md`).
 
 ## Estrutura
@@ -72,6 +72,6 @@ skills/
     SKILL.md              # playbook do Team Leader
     references/
       agents/*.md         # os 8 estagiários
-      patterns/*.md       # premissas derivadas do repo Intra
+      patterns/*.md       # premissas derivadas do repo
       safety-and-git.md · pixel-agents.md · REFRESH.md
 ```

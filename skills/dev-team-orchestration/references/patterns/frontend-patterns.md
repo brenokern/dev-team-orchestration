@@ -1,4 +1,4 @@
-# Padrões de Frontend — derivados do repo Intra
+# Padrões de Frontend — derivados do repo
 
 > Snapshot extraído de `apps/frontend` (51 páginas, 862 componentes `.tsx`, 61 arquivos de api).
 > Regenere com `references/REFRESH.md`. Estes são os padrões-premissa: siga-os; se um deles
