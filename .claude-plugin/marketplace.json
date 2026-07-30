@@ -1,0 +1,15 @@
+{
+  "name": "breno-dev-team",
+  "owner": {
+    "name": "Breno Kern",
+    "email": "breno.kern@hotmail.com"
+  },
+  "plugins": [
+    {
+      "name": "dev-team-orchestration",
+      "source": ".",
+      "description": "Time de subagents estagiários que executa um plano de implementação no seu monorepo camada por camada (infra → dados → backend → frontend), com revisão entre camadas, QA, teste de UI/UX com Playwright, commits locais sem push e TLDR de PR.",
+      "version": "0.1.0"
+    }
+  ]
+}
