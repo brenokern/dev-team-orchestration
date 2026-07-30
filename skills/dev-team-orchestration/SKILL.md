@@ -46,6 +46,7 @@ comando de plugin com o nome do plugin), ou em **linguagem natural** ("roda o ti
 | backend-intern | NestJS module/service/controller/DTO | opus |
 | **frontend-intern** | Next.js page/hooks/api/sidebar | **fable** |
 | infra-intern | Terraform/AWS/lambdas ETL (só se o plano toca) | opus |
+| ai-intern | Agentes de IA com Strands SDK (TS), Bedrock (só se o plano toca) | opus |
 | qa-intern | lint/test/build (read-only) | opus |
 | **ux-intern** | teste de UI/UX com Playwright + a11y (read-only no código) | opus |
 | reviewer-intern | code-review do diff (read-only) | opus |
@@ -69,10 +70,13 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
 - Leia `CLAUDE.md`, `CLAUDE_GUIDELINES.md`, `GIT.md` do repo para ancorar o time.
 - A partir do plano, decida QUAIS camadas entram (nem todo plano tem infra ou frontend).
 
-### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → frontend`:
+### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → ai → frontend`:
 
-**As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). Dentro de
-uma camada, o trabalho é quebrado em **passos pequenos**.
+**As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). A camada
+**ai** (agentes com Strands SDK, via `ai-intern`) só entra quando o plano tem trabalho de
+agente de IA, e roda **depois do backend** (as tools do agente consomem os serviços do backend)
+e **antes do frontend** (que pode chamar o endpoint do agente). Dentro de uma camada, o trabalho
+é quebrado em **passos pequenos**.
 
 **Princípios de execução (velocidade + dinamismo) — leia antes:**
 - **Passos ATÔMICOS.** Quebre a camada nos passos do plano (10.1, 10.2, 10.3…) e despache **um
@@ -136,6 +140,8 @@ aguarda ele revisar e aplicar**.
 ## Reuso de skills pelos especialistas
 - `frontend-intern` → `taste-skill`, `ui-ux-pro-max` para UI (se instaladas).
 - `ux-intern` → `design:design-critique`, `design:accessibility-review`, `ui-ux-pro-max`.
+- `ai-intern` → premissas do **Strands SDK** (strandsagents.com) + `claude-code-guide` (Claude
+  Agent SDK / Claude API); o Leader pode invocar o agente `claude-code-guide` pra dúvidas.
 - `reviewer-intern` → `engineering:code-review`.
 - `ponytail` está ativo globalmente → todos priorizam reuso e diff mínimo.
 
@@ -154,4 +160,4 @@ estrutural + mineração de log; não relê todos os diffs).
 - `references/REFRESH.md` — rotina para regenerar os padrões a partir do repo.
 - `references/safety-and-git.md` — rails de segurança e formato de commit (todo agente lê).
 - `references/pixel-agents.md` — como ver o time trabalhando no terminal / VS Code.
-- `references/agents/*.md` — o prompt de cada especialista (inclui `ux.md`).
+- `references/agents/*.md` — o prompt de cada especialista (inclui `ux.md` e `ai.md`).

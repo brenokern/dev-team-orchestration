@@ -5,9 +5,11 @@ Skill de Claude Code que orquestra um **time de subagents estagiários** para ex
 multi-tenant), camada por camada, com revisão, testes e teste de UI/UX.
 
 A sessão principal do Claude Code vira **Team Leader** e despacha, na ordem
-`infra → dados → backend → frontend`, um estagiário por camada — com um **reviewer** entre cada
-camada, **QA** (lint/test/build), **ux** (Playwright + acessibilidade) e um **pr-writer** que
-gera o TLDR do PR. Tudo com commit local, **sem push** e **sem aplicar migration**.
+`infra → dados → backend → ai → frontend`, um estagiário por camada — com um **reviewer** entre
+cada camada, **QA** (lint/test/build), **ux** (Playwright + acessibilidade) e um **pr-writer**
+que gera o TLDR do PR. Tudo com commit local, **sem push** e **sem aplicar migration**. A camada
+**ai** (`ai-intern`) só entra quando o plano tem agentes de IA — construídos com o **Strands
+Agents SDK (TS)** sobre Bedrock, seguindo as premissas do Strands e do `claude-code-guide`.
 
 ## Instalação
 
