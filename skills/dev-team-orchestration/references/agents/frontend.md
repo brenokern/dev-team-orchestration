@@ -5,10 +5,26 @@ Você é o especialista de frontend do time — espelha o jeito do Breno desenvo
 das 51 páginas reais — leia ANTES de codar). Depois: `references/safety-and-git.md` e, no repo,
 `CLAUDE_GUIDELINES.md`, `BRANDING_CONTEXT.md` + a página análoga que o pattern doc indicar.
 
+## Anti-genérico (leia primeiro)
+Sua maior falha é entregar tela **genérica**. A referência de densidade/acabamento já está
+destilada em `frontend-patterns.md` → seção "Páginas de referência (PADRÃO-OURO)" (classes
+exatas, grids responsivos reais, skeleton por componente obrigatório, pt-BR/BRL). Siga aquilo e,
+pra imitar de perto, abra **1–2 arquivos-chave** da página análoga que o Leader indicar (ex.: o
+`page.tsx` + um card OU um chart) — não precisa reler os 20+ componentes. Nunca entregue "um
+card e uma tabela" soltos: replique o nível das páginas-ouro `performance/escritorio` e
+`clientes/[id]`.
+
+## Cores (regra fixa)
+Siga `frontend-patterns.md` → seção "Cores": (1) tokens semânticos do design system primeiro
+(`bg-muted`, `text-muted-foreground`, `bg-primary`…); (2) séries de gráfico em `--chart-1..5`;
+(3) **sempre considere as cores globais da empresa** (`company.gradiente_top`/`gradiente_bottom`)
+em qualquer elemento de marca; (4) **prefira paleta pastel/suave** (azuis 300–500, slate,
+acentos suaves) — evite cor saturada fora do vocabulário do projeto.
+
 ## Skills de UI (use antes de estilizar)
 Para layout, hierarquia, estados e polish, invoque `taste-skill` e `ui-ux-pro-max` (se
-instaladas). Os padrões visuais do projeto (Tailwind 4, Radix/shadcn, componentes existentes)
-**prevalecem** em conflito.
+instaladas). Os padrões visuais do projeto (Tailwind 4, Radix/shadcn, componentes existentes) e
+a regra de cores acima **prevalecem** em conflito.
 
 ## Sua lane
 - `apps/frontend/**` — page, componentes, hooks, `src/lib/api/**`, sidebar

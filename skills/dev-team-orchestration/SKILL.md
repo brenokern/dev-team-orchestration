@@ -71,39 +71,46 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
 
 ### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → frontend`:
 
-**As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). O que
-pode ser paralelo é o trabalho DENTRO de uma camada, quando o plano tem tarefas independentes.
+**As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). Dentro de
+uma camada, o trabalho é quebrado em **passos pequenos**.
 
-1. Anuncie no terminal: `▶ Camada <X>`.
-2. **Decomponha a camada em tarefas** a partir do plano e classifique se são **independentes**.
-   Duas tarefas da mesma camada são independentes SOMENTE se TODAS forem verdade:
-   - **arquivos disjuntos** — nenhum arquivo em comum (nem `app.module.ts`, `app-sidebar.tsx`,
-     um mesmo model, um mesmo arquivo de api compartilhado, etc.);
-   - **sem dependência de contrato entre elas** — uma não consome DTO/rota/tabela que a outra
-     ainda vai criar;
-   - **mesmo papel/agente** (ex.: dois módulos de backend distintos = dois `backend-intern`).
-   Na menor dúvida, trate como **dependentes** (sequencial). Colisão de arquivo é pior que
-   lentidão.
-3. **Despache:**
-   - **Independentes (2+):** dispare todos os `Agent` do lote **numa única mensagem** (é o que
-     faz o Claude Code rodar em paralelo — e o que enche o escritório do Pixel Agents). Cada um:
-     `subagent_type: general-purpose`, `model` conforme o roster, `description` curto/legível
-     (ex.: "backend-intern: módulo tarefas"), `prompt` = `references/agents/<x>.md` + o trecho
-     do plano DAQUELA tarefa + os contratos das camadas anteriores. Nunca coloque duas tarefas
-     que tocam o mesmo arquivo no mesmo lote.
-   - **Dependentes ou tarefa única:** despache uma de cada vez, na ordem que o contrato exige.
-4. Cada especialista implementa e faz **commit local** da sua parte, e devolve o relatório
-   estruturado (o que fez, arquivos, o commit, contrato pra próxima camada). Um commit por
-   tarefa (não misture duas tarefas paralelas no mesmo commit).
-5. **Gate de revisão:** quando a camada inteira terminou (todo o lote paralelo + as
-   sequenciais), despache `reviewer-intern` (opus, read-only) no diff da camada.
-   - Reviewer aprova → siga pra próxima camada.
-   - Reviewer aponta problemas → re-despache o dono da tarefa culpada com o feedback; repita até
-     aprovar. Não avance com pendência.
+**Princípios de execução (velocidade + dinamismo) — leia antes:**
+- **Passos ATÔMICOS.** Quebre a camada nos passos do plano (10.1, 10.2, 10.3…) e despache **um
+  passo por dispatch**. NUNCA empacote 10.1–10.5 num dispatch só — subagents curtos terminam
+  rápido e enchem o Pixel Agents; dispatch gigante = lento e escritório vazio.
+- **Não releia o mundo a cada passo.** Os docs do repo já foram lidos no passo 0. No prompt de
+  cada passo passe SÓ: o slice daquele passo + a seção específica de `patterns/*` + os 1–2
+  arquivos análogos a imitar. Nada de "leia o CLAUDE_GUIDELINES inteiro / a página inteira" a
+  cada dispatch — isso é o que mais custa tempo.
+- **Revisão no FIM da camada, não a cada micro-passo.** Deixe os passos pequenos correrem; o
+  `reviewer-intern` roda **uma vez por camada** sobre o diff acumulado. Revisar passo a passo é
+  o maior gargalo.
+- **Velocidade > profundidade em camada mecânica:** o Leader pode rodar os implementadores em
+  `sonnet` (mais rápido) e manter `opus` só no reviewer, quando a camada for repetitiva.
 
-### N+1. QA
-Despache `qa-intern` (opus): roda `pnpm lint` + `pnpm test:cov` + `pnpm test:e2e` (backend) +
-`pnpm build`. Falhou → volta pro dono da camada culpada com o log; re-QA depois do fix.
+1. Anuncie: `▶ Camada <X>`.
+2. **Liste os passos atômicos** do plano naquela camada. Marque quais são **independentes**
+   (arquivos disjuntos + sem contrato entre si + mesmo papel) — esses podem ir em **lote
+   paralelo** (vários `Agent` numa mensagem só); o resto vai em sequência, **um passo por
+   dispatch**. Na dúvida, sequencial (colisão de arquivo é pior que lentidão).
+3. **Despache cada passo** (ou lote independente) via **Agent**: `subagent_type: general-purpose`,
+   `model` do roster, `description` curta e específica (ex.: "backend-intern: 10.2 DTO de
+   notas"), `prompt` = `references/agents/<x>.md` + o slice DAQUELE passo + os contratos já
+   entregues + a seção de `patterns/*` + o arquivo análogo. **Um passo por dispatch**; nunca
+   empacote vários passos nem duas tarefas que tocam o mesmo arquivo.
+4. Cada dispatch faz **commit local do seu passo** (um commit por passo) e devolve um relatório
+   curto (fez / arquivos / commit / contrato pra frente).
+5. **Gate de revisão (fim da camada):** despache `reviewer-intern` (opus, read-only) no diff da
+   camada inteira.
+   - Aprova → próxima camada.
+   - Achou problema → re-despache **só o passo culpado** com o feedback; repita até aprovar. Não
+     avance com pendência.
+
+### N+1. QA (uma vez, no fim — não por camada)
+Despache `qa-intern`: `pnpm lint` + `pnpm build` sempre; testes = **só os specs afetados** pela
+mudança (`pnpm test -- <arquivos>`), não a suíte inteira — rode `test:cov`/`test:e2e` completos
+só se a mudança for ampla ou o reviewer pedir. Falhou → volta pro dono do passo culpado com o
+log; re-QA depois do fix.
 
 ### N+2. UI/UX (só se a feature tem frontend)
 Despache `ux-intern` (opus): sobe o front e usa **Playwright** para navegar os fluxos da feature
