@@ -423,7 +423,8 @@ function mkTok(role,x,y,mood,lead){
 }
 function setPose(t,pose){t.pose=pose;
   t.holder.innerHTML=sprite(A(t.ag),pose,t.mood,3,t.flip);}
-function stopMove(t){if(t._iv){clearInterval(t._iv);t._iv=null;}gsap.killTweensOf(t.el);}
+function stopMove(t){if(t._iv){clearInterval(t._iv);t._iv=null;}
+  gsap.killTweensOf(t.el,"left,top,y");} /* so movimento — nunca mate o fade de opacidade */
 async function walk(t,x,y,speed){
   const el=t.el,cx=parseFloat(el.style.left),cy=parseFloat(el.style.top);
   const d=Math.hypot(x-cx,y-cy);if(d<4)return;
