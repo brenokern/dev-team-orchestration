@@ -98,11 +98,15 @@ e **antes do frontend** (que pode chamar o endpoint do agente). Dentro de uma ca
    (arquivos disjuntos + sem contrato entre si + mesmo papel) — esses podem ir em **lote
    paralelo** (vários `Agent` numa mensagem só); o resto vai em sequência, **um passo por
    dispatch**. Na dúvida, sequencial (colisão de arquivo é pior que lentidão).
-3. **Despache cada passo** (ou lote independente) via **Agent**: `subagent_type: general-purpose`,
-   `model` do roster, `description` curta e específica (ex.: "backend-intern: 10.2 DTO de
-   notas"), `prompt` = `references/agents/<x>.md` + o slice DAQUELE passo + os contratos já
-   entregues + a seção de `patterns/*` + o arquivo análogo. **Um passo por dispatch**; nunca
-   empacote vários passos nem duas tarefas que tocam o mesmo arquivo.
+3. **Despache cada passo** (ou lote independente) via **Agent**. Se o plugin estiver instalado,
+   os papéis existem como **subagents nomeados** — use `subagent_type: "<papel>-intern"` (ex.:
+   `backend-intern`); o prompt do papel + rails já vivem no agente, então o `prompt` do dispatch
+   leva SÓ o slice DAQUELE passo + os contratos já entregues + a seção de `patterns/*` + o
+   arquivo análogo. No modo skill-avulsa (sem os agentes nomeados), caia no comportamento
+   antigo: `subagent_type: general-purpose` com `references/agents/<x>.md` colado no prompt.
+   Em ambos: `model` do roster, `description` no formato `"<papel>: <passo>"` (ex.:
+   "backend-intern: 10.2 DTO de notas"). **Um passo por dispatch**; nunca empacote vários
+   passos nem duas tarefas que tocam o mesmo arquivo.
 4. Cada dispatch faz **commit local do seu passo** (um commit por passo) e devolve um relatório
    curto (fez / arquivos / commit / contrato pra frente).
 5. **Gate de revisão (fim da camada):** despache `reviewer-intern` (opus, read-only) no diff da
@@ -156,9 +160,34 @@ São um snapshot. Depois de mudanças grandes no repo, o usuário pede **"atuali
 dev-team-orchestration"** e o Leader regenera seguindo `references/REFRESH.md` (sondagem
 estrutural + mineração de log; não relê todos os diffs).
 
+## Modo visual (team-view)
+
+Quando a invocação vier de `/dev-team-orchestration:run-visual`, ou o usuário pedir "com
+visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (nada mais muda):
+
+1. **Suba o viewer em background** antes do passo 0:
+   `node "${CLAUDE_PLUGIN_ROOT}/viewer/cli.mjs" --open &` (Bash com `run_in_background`).
+   O viewer é **read-only** — quem inicia, aprova e encerra a run é sempre o terminal.
+2. **Publique o plan-graph** no fim do passo 0: escreva um JSON com
+   `{title, roster:[{id,model}], steps:[{id,title,layer,owner,deps[],human?}]}` — um step por
+   dispatch previsto, `deps` refletindo a ordem real, e um step `human:true` para CADA
+   intervenção humana prevista (aplicar migration, aplicar infra, abrir o PR). Depois:
+   `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" plan <arquivo.json>`.
+3. **Dispatch nomeado** (item 3 acima) — é o que faz cada personagem aparecer certo no viewer.
+4. **Gates humanos**: ao chegar num step `human:true`, rode
+   `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" gate <id> waiting "<o que fazer>"` ANTES de
+   parar e perguntar no terminal (acende o card âmbar + notificação nativa do SO). Quando o
+   usuário resolver: `... gate <id> approved`.
+
+Os hooks do plugin (`hooks/hooks.json`) capturam `SubagentStart/Stop` e `Pre/PostToolUse`
+sozinhos — o Leader não emite nada por evento de tool. O comando `emit.mjs` NUNCA falha nem
+bloqueia; se o viewer não estiver aberto, a run segue normal e o log fica disponível pra
+`viewer/cli.mjs --replay`.
+
 ## Referências
 - `references/patterns/*.md` — padrões-premissa por camada (fonte primária dos especialistas).
 - `references/REFRESH.md` — rotina para regenerar os padrões a partir do repo.
 - `references/safety-and-git.md` — rails de segurança e formato de commit (todo agente lê).
 - `references/pixel-agents.md` — como ver o time trabalhando no terminal / VS Code.
-- `references/agents/*.md` — o prompt de cada especialista (inclui `ux.md` e `ai.md`).
+- `references/agents/*.md` — o prompt de cada especialista (inclui `ux.md` e `ai.md`); no
+  plugin, os mesmos prompts viram os subagents nomeados em `agents/` (gerados a partir daqui).

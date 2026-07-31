@@ -8,8 +8,8 @@
     {
       "name": "dev-team-orchestration",
       "source": ".",
-      "description": "Time de subagents estagiários que executa um plano de implementação no seu monorepo camada por camada (infra → dados → backend → frontend), com revisão entre camadas, QA, teste de UI/UX com Playwright, commits locais sem push e TLDR de PR.",
-      "version": "0.1.0"
+      "description": "Time de subagents estagiários que executa um plano de implementação no seu monorepo camada por camada (infra → dados → backend → frontend), com revisão entre camadas, QA, teste de UI/UX com Playwright, commits locais sem push e TLDR de PR — agora com team-view: um escritorio visual ao vivo no browser (pixel art + hooks) e o comando /run-visual.",
+      "version": "0.2.0"
     }
   ]
 }

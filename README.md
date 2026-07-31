@@ -1,14 +1,19 @@
 # dev-team-orchestration
 
-Plugin de Claude Code (skill + comando `/run`) que orquestra um **time de subagents estagiários**
-para executar um **plano de implementação já escrito** no monorepo (NestJS + Next.js + Prisma
-multi-tenant), camada por camada, com revisão, testes e teste de UI/UX.
+Plugin de Claude Code (skill + comandos `/run` e `/run-visual`) que orquestra um **time de
+subagents estagiários** para executar um **plano de implementação já escrito** no monorepo
+(NestJS + Next.js + Prisma multi-tenant), camada por camada, com revisão, testes, teste de
+UI/UX — e um **escritório visual ao vivo (team-view)** pra assistir o time trabalhando.
 
-> **Skill ou plugin?** O coração é a **skill** `dev-team-orchestration`, que é **autocontida**:
-> os estagiários são arquivos de prompt em `references/agents/*.md` despachados via a ferramenta
-> `Agent` genérica — **não** são subagents registrados do Claude Code. Por isso não existe pasta
-> `agents/` no topo. O plugin só adiciona, por cima da skill, o slash command `/dev-team-orchestration:run`.
-> Instalar só a skill (Opção B) não perde nenhum estagiário — perde apenas esse atalho de comando.
+![team-view — o escritório do time ao vivo no browser](docs/team-view.png)
+
+> **Skill ou plugin?** O coração é a **skill** `dev-team-orchestration`, que continua
+> **autocontida**: os prompts dos estagiários vivem em `references/agents/*.md` e podem ser
+> despachados via `Agent` genérico (modo skill-avulsa). O plugin adiciona por cima: os
+> **subagents nomeados** em `agents/` (mesmos prompts, com identidade própria — é o que liga o
+> team-view), os **hooks** de telemetria, o **viewer** e os slash commands
+> `/dev-team-orchestration:run` e `/dev-team-orchestration:run-visual`.
+> Instalar só a skill (Opção B) mantém o time funcionando — perde os comandos e o modo visual.
 
 A sessão principal do Claude Code vira **Team Leader** e despacha, na ordem
 `infra → dados → backend → ai → frontend`, um estagiário por camada — com um **reviewer** entre
@@ -63,6 +68,39 @@ pra você abrir.
 > (`/plugin:comando`), então não dá pra ter um `/dev-team-orchestration` puro — o comando é
 > `/dev-team-orchestration:run`. Se preferir, ignore o slash e use linguagem natural.
 
+## team-view — o escritório visual ao vivo
+
+```
+/dev-team-orchestration:run-visual caminho/do/plano.md
+```
+
+Igual ao `/run`, mais uma aba do browser que abre sozinha com o **escritório do time em pixel
+art**: o plan-graph vira um fluxo de cards (layout por colunas, sem sobreposição, com os passos
+de **validação humana** como cards âmbar tracejados), cada estagiário é um personagem que anda
+até a mesa do seu passo, senta de costas olhando o PC e trabalha; quem não entra no plano fica
+triste no sofá vendo TV, e quem termina vai se juntando ao sofá. O team-leader patrulha quem
+está trabalhando. A câmera segue e dá zoom no passo ativo; o painel direito é o stream de
+atividade real (cada tool call dos hooks).
+
+Como funciona por baixo (e por que é seguro):
+
+- **Hooks → NDJSON**: `hooks/hooks.json` registra `SubagentStart/Stop`, `Pre/PostToolUse` e
+  `Stop`; cada evento vira UMA linha em `~/.claude/team-view/<sessão>.ndjson` via
+  `hooks/emit.mjs` — que **nunca falha e nunca bloqueia** a run (erro é engolido, exit 0).
+- **CLI → SSE**: `viewer/cli.mjs` (Node 18+, zero dependências) faz tail do arquivo e serve o
+  viewer em `localhost:4517`. Abrir no meio da run funciona: o estado é reconstruído do log.
+- **O viewer é read-only.** Não existe botão de rodar, reiniciar nem aprovar — quem comanda a
+  run é o terminal, sempre.
+- **Validação humana**: quando o time chega num passo `human` (aplicar migration, abrir o PR),
+  o card fica âmbar pulsando, toca um chime, o título da aba pisca e o `emit.mjs` dispara uma
+  **notificação nativa do SO** — tudo apontando para o mesmo lugar: **volte ao terminal**.
+  (Browser não consegue focar a janela do terminal; o aviso é o melhor honesto.)
+- **Replay**: `node viewer/cli.mjs --replay ~/.claude/team-view/<sessão>.ndjson` reassiste
+  qualquer run. `viewer/demo.html` é uma demo standalone com uma run simulada (abra direto no
+  browser, sem servidor).
+
+Requisitos do modo visual: Claude Code com hooks `SubagentStart`/`SubagentStop` e Node 18+.
+
 ## Skills companheiras (instale para o time render 100%)
 
 Os estagiários reutilizam skills abertas; sem elas alguns papéis rodam degradados (mas rodam):
@@ -105,14 +143,29 @@ grandes, peça "atualiza os padrões da dev-team-orchestration" (rotina em `refe
 .claude-plugin/
   marketplace.json        # catálogo (1 plugin, source ".")
   plugin.json             # manifesto do plugin
+agents/
+  *-intern.md             # 9 subagents nomeados (gerados dos references/agents + safety-and-git)
 commands/
-  run.md                  # slash command /dev-team-orchestration:run (só no modo plugin)
+  run.md                  # /dev-team-orchestration:run
+  run-visual.md           # /dev-team-orchestration:run-visual (team-view ligado)
+hooks/
+  hooks.json              # registra os eventos de telemetria do team-view
+  emit.mjs                # única porta de escrita: NDJSON + gates + toast nativo (nunca falha)
+viewer/
+  cli.mjs                 # server local: tail + SSE + replay (Node 18+, zero deps)
+  index.html              # o escritório (read-only, dirigido pelos eventos)
+  demo.html               # demo standalone com run simulada
+docs/
+  team-view.png           # screenshot do viewer
 skills/
   dev-team-orchestration/
-    SKILL.md              # playbook do Team Leader (skill autocontida)
+    SKILL.md              # playbook do Team Leader (skill autocontida + seção do modo visual)
     references/
-      agents/*.md         # 9 prompts de estagiário (infra, data, backend, ai, frontend,
-                          #   qa, ux, reviewer, pr-writer) — despachados via ferramenta Agent
+      agents/*.md         # 9 prompts de estagiário — fonte dos agents/ do plugin
       patterns/*.md       # premissas derivadas do repo
       safety-and-git.md · pixel-agents.md · REFRESH.md
 ```
+
+> Regenerar os `agents/` depois de editar um prompt em `references/agents/`:
+> cada `agents/<papel>-intern.md` = frontmatter (name/description) + `references/agents/<papel>.md`
+> + `references/safety-and-git.md`.

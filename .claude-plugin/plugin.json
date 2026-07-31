@@ -1,7 +1,7 @@
 {
   "name": "dev-team-orchestration",
-  "description": "Orquestra um time de subagents estagiários especializados no seu monorepo para executar um plano de implementação já escrito, camada por camada, com revisão, testes e UX.",
-  "version": "0.1.0",
+  "description": "Orquestra um time de subagents estagiários especializados no seu monorepo para executar um plano de implementação já escrito, camada por camada, com revisão, testes e UX Inclui o team-view: visualizacao ao vivo do time no browser via hooks.",
+  "version": "0.2.0",
   "author": {
     "name": "Breno Kern",
     "email": "breno.kern@hotmail.com"
