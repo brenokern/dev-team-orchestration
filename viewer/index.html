@@ -179,9 +179,9 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .status.live .d{background:var(--live)}
 .status.dead .d{background:#e24b4a}
 .stream{padding:0 13px 13px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:2px}
-.ev{display:flex;gap:9px;padding:6px 8px;border-radius:9px;font-family:"Geist Mono",monospace;
-  font-size:10px;line-height:1.5;opacity:0}
-.ev .who{color:var(--live);flex:0 0 auto}
+.ev{display:flex;flex-direction:column;gap:1px;padding:6px 9px;border-radius:9px;
+  font-family:"Geist Mono",monospace;font-size:10px;line-height:1.5;opacity:0}
+.ev .who{color:var(--live);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
 .ev.sys .who{color:var(--faint)}
 .ev.hum .who{color:var(--hold)}
 .ev .what{color:var(--dim);word-break:break-word;min-width:0}
@@ -547,6 +547,15 @@ function buildGraph(){
 }
 
 /* ================= event engine ================= */
+/* agent_type de plugin chega namespaced ("dev-team-orchestration:backend-intern") —
+   normaliza pra casar com o owner do plan-graph */
+const norm=r=>r?String(r).split(":").pop():r;
+/* caminhos longos quebram o painel: mostra so os ultimos 3 segmentos */
+const shortPath=str=>String(str||"").split(" ").map(tok=>{
+  if(!tok.includes("/")||tok.length<28)return tok;
+  const parts=tok.split("/").filter(Boolean);
+  return (parts.length>3?"…/":"/")+parts.slice(-3).join("/");
+}).join(" ");
 const chains={}; /* fila por papel: ordem interna garantida, papeis em paralelo */
 const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(()=>{});};
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
@@ -561,12 +570,19 @@ function ensureTok(role,s){
 }
 
 function applyEvent(e){
+  if(e.agent)e.agent=norm(e.agent);
+  if(e.sub)e.sub=norm(e.sub);
   if(e.ev==="plan"){plan=e.plan;chain("main",()=>buildGraph());return;}
   if(!plan)return; /* eventos antes do plano: so log do leader */
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
     chain(role,async()=>{
-      const s=nextPending(role);if(!s)return;
+      const s=nextPending(role);
+      if(!s){ /* dispatch fora do plano (ex.: consulta avulsa): mostra sem quebrar */
+        const t=toks[role]||mkTok(role,320,SH-120,"ok");
+        gsap.set(t.el,{opacity:1});t.el.classList.add("busy");
+        log(role.replace("-intern",""),"trabalhando (passo fora do plan-graph)");
+        return;}
       s.status="running";s._start=e.t||Date.now();
       roleState[role]=s;
       const t=ensureTok(role,s);
@@ -589,7 +605,7 @@ function applyEvent(e){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     const who=role==="leader"?"leader":role.replace("-intern","");
     if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
-    else log(who,(e.tool||"")+" "+(e.info||""));
+    else log(who,(e.tool||"")+" "+shortPath(e.info));
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) */
     if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
@@ -597,7 +613,9 @@ function applyEvent(e){
   if(e.ev==="SubagentStop"){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     chain(role,async()=>{
-      const s=roleState[role];if(!s)return;
+      const s=roleState[role];
+      if(!s){const t=toks[role];if(t)t.el.classList.remove("busy");
+        log(role.replace("-intern",""),"encerrou (fora do plan-graph)","rep");return;}
       s.status="done";roleState[role]=null;
       if(s._pr){s._pr.remove();s._pr=null;}
       const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
