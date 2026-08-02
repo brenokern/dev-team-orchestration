@@ -88,8 +88,8 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .chip.warn .d{background:var(--hold)}
 .chip.warn b{color:var(--hold)}
 .chip.off{opacity:.55}
-.chip.btn{cursor:pointer;background:var(--hair-soft);border-color:var(--hair);color:var(--txt);padding:7px 14px}
-.chip.btn:hover{background:var(--hair);transform:translateY(-1px)}
+.chip.btn{cursor:pointer;background:var(--hair);border-color:var(--edge-past);color:var(--txt);padding:7px 14px}
+.chip.btn:hover{background:var(--edge-past);transform:translateY(-1px)}
 .chip.btn:active{transform:scale(.96)}
 .strip .grow{flex:1}
 .stagewrap{flex:1;position:relative;overflow:hidden;min-height:0;cursor:grab}
@@ -194,9 +194,12 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   border:1px solid var(--hold-dim);border-radius:999px;padding:5px 12px;white-space:nowrap}
 .zoom{position:absolute;right:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:2px;
   background:var(--core-2);border:1px solid var(--hair);border-radius:999px;padding:4px}
-.zoom button{font-family:"Geist Mono",monospace;font-size:12px;color:var(--txt);background:transparent;
-  border:0;width:28px;height:28px;border-radius:50%;cursor:pointer;transition:background .4s var(--ease)}
-.zoom button:hover{background:var(--hair-soft)}
+.zoom button{font-family:"Geist Mono",monospace;font-size:11px;color:var(--txt);
+  background:var(--hair-soft);border:1px solid var(--hair);min-width:28px;height:27px;
+  padding:0 9px;margin:0 1px;border-radius:9px;cursor:pointer;
+  transition:background .4s var(--ease),transform .4s var(--ease)}
+.zoom button:hover{background:var(--hair);transform:translateY(-1px)}
+.zoom button:active{transform:scale(.95)}
 .zoom .lv{font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--dim);min-width:38px;text-align:center}
 .status{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
   background:var(--core-2);border:1px solid var(--hair);border-radius:999px;padding:9px 18px;
@@ -226,39 +229,40 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 
 <div class="app">
   <div class="shell"><div class="core">
-    <div class="ph"><h2>time</h2><span class="count" id="cnt">—</span></div>
+    <div class="ph"><h2 id="h-team">time</h2><span class="count" id="cnt">—</span></div>
     <div class="lead"><div class="lead-c" id="lc">
       <div class="lead-t"><span class="ldot" id="ldot"></span><span class="lead-n">team-leader</span></div>
-      <div class="lead-m" id="lm">aguardando sessao</div>
+      <div class="lead-m" id="lm">aguardando sessão</div>
     </div></div>
     <div class="roster" id="roster"></div>
   </div></div>
 
   <div class="shell"><div class="core">
     <div class="strip">
-      <div class="chip" id="c-session"><span class="d"></span>sessao <b>—</b></div>
+      <div class="chip" id="c-session"><span class="d"></span>sessão <b>—</b></div>
       <span class="grow"></span>
       <div class="chip btn ok" id="c-snd">som <b>on</b></div>
       <div class="chip btn" id="c-theme">tema <b>dark</b></div>
+      <div class="chip btn" id="c-lang">PT-BR</div>
     </div>
     <div class="stagewrap" id="wrap">
       <div class="stage" id="stage"><svg class="edges" id="edges"></svg></div>
       <div class="gatewrap"><div class="gate" id="gate">
         <span class="gd"></span>
-        <div><div class="gt">o time precisa de você</div><div class="gs" id="gate-s"></div></div>
-        <span class="term">&#8629; volte ao terminal</span>
+        <div><div class="gt" id="gate-t">o time precisa de você</div><div class="gs" id="gate-s"></div></div>
+        <span class="term" id="gate-term">&#8629; volte ao terminal</span>
       </div></div>
       <div class="zoom">
         <button id="z-out">&minus;</button><span class="lv" id="z-lv">100%</span>
         <button id="z-in">+</button><button id="z-fit" style="font-size:9px">fit</button>
-        <button id="z-focus" style="font-size:9px;width:auto;padding:0 10px" title="centraliza no passo em execucao">foco</button>
+        <button id="z-focus" style="font-size:9px" title="centraliza no passo em execução">foco</button>
       </div>
       <div class="status" id="status"><span class="d"></span><span id="status-t">conectando…</span></div>
     </div>
   </div></div>
 
   <div class="shell"><div class="core">
-    <div class="ph"><h2>atividade</h2><span class="count" id="ec">0</span></div>
+    <div class="ph"><h2 id="h-act">atividade</h2><span class="count" id="ec">0</span></div>
     <div class="stream" id="stream"><div class="empty" id="empty">nenhum evento ainda<br>
       rode <b>/dev-team-orchestration:run-visual</b> no terminal</div></div>
   </div></div>
@@ -267,6 +271,69 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
+
+/* ================= i18n ================= */
+let LANG="pt";try{LANG=localStorage.getItem("tv-lang")||"pt";}catch(e){}
+const STR={
+ pt:{team:"time",activity:"atividade",session:"sessão",sound:"som",theme:"tema",
+  focus:"foco",focusTip:"centraliza no passo em execução",fit:"fit",
+  connecting:"conectando…",live:"ao vivo",replay:"replay",
+  disconnected:"desconectado — tentando de novo",replayDone:"replay concluído",
+  waitingSession:"aguardando sessão",
+  planReceived:n=>"plan-graph recebido — "+n+" passos",
+  planPublished:n=>"plan-graph publicado — "+n+" passos",
+  monitoring:(r,i)=>"monitorando "+r+" · "+i,
+  blocked:"bloqueado — precisa de você no terminal",
+  consolidating:"consolidando · próximo passo",
+  pausedGate:"pausado — resolva no terminal",
+  leaderPaused:"leader pausado no terminal",
+  runDone:"run concluída — veja o resumo no terminal",
+  needsYou:"o time precisa de você",backTerm:"\u21a9 volte ao terminal",
+  flash:"volte ao terminal",
+  started:(i,tt)=>"iniciou "+i+" — "+tt,
+  finished:i=>"encerrou "+i+" — relatório no terminal",
+  dispatched:"despachou: ",offPlan:"trabalhando (passo fora do plan-graph)",
+  offPlanEnd:"encerrou (fora do plan-graph)",
+  approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
+  natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
+  empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
+ en:{team:"team",activity:"activity",session:"session",sound:"sound",theme:"theme",
+  focus:"focus",focusTip:"center on the running step",fit:"fit",
+  connecting:"connecting…",live:"live",replay:"replay",
+  disconnected:"disconnected — retrying",replayDone:"replay finished",
+  waitingSession:"waiting for a session",
+  planReceived:n=>"plan-graph received — "+n+" steps",
+  planPublished:n=>"plan-graph published — "+n+" steps",
+  monitoring:(r,i)=>"monitoring "+r+" · "+i,
+  blocked:"blocked — needs you in the terminal",
+  consolidating:"consolidating · next step",
+  pausedGate:"paused — resolve it in the terminal",
+  leaderPaused:"leader paused in the terminal",
+  runDone:"run finished — see the summary in the terminal",
+  needsYou:"the team needs you",backTerm:"\u21a9 back to the terminal",
+  flash:"back to the terminal",
+  started:(i,tt)=>"started "+i+" — "+tt,
+  finished:i=>"finished "+i+" — report in the terminal",
+  dispatched:"dispatched: ",offPlan:"working (step outside the plan-graph)",
+  offPlanEnd:"finished (outside the plan-graph)",
+  approved:"approved — the team moves on",teamEnd:"team finished.",you:"you",
+  natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
+  empty:"no events yet<br>run <b>/dev-team-orchestration:run-visual</b> in the terminal"}
+};
+const t=k=>STR[LANG][k];
+let SESS="—",statusKey="connecting";
+function applyLang(){
+  try{localStorage.setItem("tv-lang",LANG);}catch(e){}
+  $("#h-team").textContent=t("team");$("#h-act").textContent=t("activity");
+  $("#c-session").innerHTML=`<span class="d"></span>${t("session")} <b>${SESS}</b>`;
+  $("#c-snd").innerHTML=`${t("sound")} <b>${snd?"on":"off"}</b>`;
+  $("#c-theme").innerHTML=`${t("theme")} <b>${document.body.dataset.theme}</b>`;
+  $("#c-lang").textContent=LANG==="pt"?"PT-BR":"EN";
+  $("#z-focus").textContent=t("focus");$("#z-focus").title=t("focusTip");
+  $("#gate-t").textContent=t("needsYou");$("#gate-term").textContent=t("backTerm");
+  $("#status-t").textContent=t(statusKey);
+  const emp=$("#empty");if(emp)emp.innerHTML=t("empty");
+}
 
 /* ================= pixel art ================= */
 const OUT="#16161c",SKIN="#e8c39e",SKIN2="#d4a87f",EYE="#141416",MOUTH="#8f4a3c",
@@ -438,9 +505,10 @@ addEventListener("resize",fit);
 
 /* ================= chips / audio / title flash ================= */
 $("#c-snd").onclick=()=>{snd=!snd;const c=$("#c-snd");c.classList.toggle("ok",snd);
-  c.classList.toggle("off",!snd);c.innerHTML=`som <b>${snd?"on":"off"}</b>`;};
+  c.classList.toggle("off",!snd);c.innerHTML=`${t("sound")} <b>${snd?"on":"off"}</b>`;};
 $("#c-theme").onclick=()=>{const b=document.body;const l=b.dataset.theme!=="light";
-  b.dataset.theme=l?"light":"dark";$("#c-theme").innerHTML=`tema <b>${l?"light":"dark"}</b>`;};
+  b.dataset.theme=l?"light":"dark";$("#c-theme").innerHTML=`${t("theme")} <b>${l?"light":"dark"}</b>`;};
+$("#c-lang").onclick=()=>{LANG=LANG==="pt"?"en":"pt";applyLang();};
 let actx;
 function chime(){if(!snd)return;
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
@@ -454,7 +522,7 @@ function chime(){if(!snd)return;
 let flashIv=null;
 function flashTitle(on){
   if(on&&!flashIv){let f=false;
-    flashIv=setInterval(()=>{f=!f;document.title=f?"● volte ao terminal — team-view":"team-view";},900);}
+    flashIv=setInterval(()=>{f=!f;document.title=f?"● "+t("flash")+" — team-view":"team-view";},900);}
   if(!on&&flashIv){clearInterval(flashIv);flashIv=null;document.title="team-view";}
 }
 
@@ -504,12 +572,12 @@ function log(who,what,cls){
   stream.scrollTop=stream.scrollHeight;$("#ec").textContent=++evN;
 }
 const leader=(t,scan)=>{$("#lm").textContent=t;$("#lc").classList.toggle("scan",!!scan);};
-setInterval(()=>{ /* timers dos cards ativos: N acoes · Ns */
+setInterval(()=>{ /* timers dos cards ativos: N ações · Ns */
   steps.forEach(s=>{
     if((s.status==="running"||s.status==="waiting")&&s._start){
       const n=nodeEl[s.id];if(!n)return;
       const secs=((Date.now()-s._start)/1000).toFixed(0)+"s";
-      n.querySelector(".n-tm").textContent=s.human?secs:((s._tools||0)+" acoes · "+secs);}});
+      n.querySelector(".n-tm").textContent=s.human?secs:((s._tools||0)+" "+t("actions")+" · "+secs);}});
 },500);
 
 async function patrol(){
@@ -611,7 +679,7 @@ function buildGraph(){
     r.classList.toggle("on",used);
     if(!used){r.classList.add("out");
       r.querySelector(".rsp").innerHTML=sprite(a,"sit","sad",1.6);
-      r.querySelector(".rs").textContent="na tv";
+      r.querySelector(".rs").textContent=t("natv");
       const tk=mkTok(role,LOUNGE.seat(seatN).x,LOUNGE._seatY,"sad");
       seatN++;tk.flip=true;setPose(tk,"sit");tk.el.style.zIndex=5;}
   });
@@ -625,8 +693,8 @@ function buildGraph(){
   if(!toks.leader){const L=mkTok("leader",260,LOUNGE._seatY-10,"ok",true);
     gsap.fromTo(L.el,{opacity:0},{opacity:1,duration:.5});patrol();}
   fit();
-  leader("plan-graph recebido — "+steps.length+" passos",false);
-  log("leader","plan-graph publicado — "+steps.length+" passos");
+  leader(t("planReceived")(steps.length),false);
+  log("leader",t("planPublished")(steps.length));
 }
 
 /* ================= event engine ================= */
@@ -697,7 +765,7 @@ function applyEvent(e){
       if(!s){ /* dispatch fora do plano (ex.: consulta avulsa): mostra sem quebrar */
         const t=toks[role]||mkTok(role,320,SH-120,"ok");
         gsap.set(t.el,{opacity:1});t.el.classList.add("busy");
-        log(role.replace("-intern",""),"trabalhando (passo fora do plan-graph)");
+        log(role.replace("-intern",""),t("offPlan"));
         return;}
       s.status="running";s._start=e.t||Date.now();
       aidStep[aid]=s;
@@ -714,23 +782,23 @@ function applyEvent(e){
           s._pr=pr;}
       } /* lote paralelo do mesmo papel: o personagem fica onde esta, o card ativa igual */
       nodeEl[s.id].classList.add("active");
-      if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent="ativo";}
+      if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent=t("active");}
       EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
       cur.step=s;cur.gate=null;
-      leader("monitorando "+role+" · "+s.id,true);
-      log(role.replace("-intern",""),"iniciou "+s.id+" — "+s.title);
+      leader(t("monitoring")(role,s.id),true);
+      log(role.replace("-intern",""),t("started")(s.id,s.title));
     });return;}
   if((e.ev==="PreToolUse")&&(e.aid||e.agent)){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     const who=role==="leader"?"leader":role.replace("-intern","");
-    if(e.tool==="Task"||e.tool==="Agent"){log("leader","despachou: "+(e.info||e.sub||""));return;}
+    if(e.tool==="Task"||e.tool==="Agent"){log("leader",t("dispatched")+(e.info||e.sub||""));return;}
     const line=(e.tool||"")+" "+shortPath(e.info);
     log(who,line);
     think(role,line);
     const st=aidStep[e.aid];if(st)st._tools=(st._tools||0)+1;
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) */
-    if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
+    if(e.tool==="Task"||e.tool==="Agent")log("leader",t("dispatched")+(e.info||e.sub||""));
     return;}
   if(e.ev==="SubagentStop"){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
@@ -738,21 +806,21 @@ function applyEvent(e){
       const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
       if(e.aid)delete aidStep[e.aid];
       if(!s||s.status!=="running"){const t=toks[role];if(t)t.el.classList.remove("busy");
-        log(role.replace("-intern",""),"encerrou (fora do plan-graph)","rep");return;}
+        log(role.replace("-intern",""),t("offPlanEnd"),"rep");return;}
       s.status="done";
       if(s._pr){s._pr.remove();s._pr=null;}
       const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
       if(s._start){
         const fmtTok=t=>t>=1000?(t/1000).toFixed(1)+"k":String(t);
         n.querySelector(".n-tm").textContent=
-          (s._tools||0)+" acoes · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s"+
+          (s._tools||0)+" "+t("actions")+" · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s"+
           (e.tok?" · "+fmtTok(e.tok)+" tok":"");
       }
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
       EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
-      log(role.replace("-intern",""),"encerrou "+s.id+" — relatorio no terminal","rep");
+      log(role.replace("-intern",""),t("finished")(s.id),"rep");
       const t=toks[role];
       if(charStep[role]===s){ /* o personagem estava NESTE passo: decide pra onde vai */
         charStep[role]=null;
@@ -765,17 +833,17 @@ function applyEvent(e){
         }else{
           const nx=nextPending(role);
           if(!nx){
-            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent="na tv";}
+            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent=t("natv");}
             if(t)await sitCouch(t);
           }else{
-            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent="aguardando";}
+            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent=t("waiting");}
             if(t){await walk(t,WAIT(nx).x,WAIT(nx).y);bob(t);}
           }
         }
       }
       if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
         rowEl[role].classList.remove("act");
-      if(cur.step===s){cur.step=null;leader("consolidando · proximo passo",false);}
+      if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
     });return;}
   if(e.ev==="gate"){
     chain("main",async()=>{
@@ -787,8 +855,8 @@ function applyEvent(e){
         EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
         cur.step=null;cur.gate={x:s.x,y:s.y};
         focus(s.x,s.y,.92);
-        leader("bloqueado — precisa de voce no terminal",true);
-        log("voce",e.msg||s.title,"hum");
+        leader(t("blocked"),true);
+        log(t("you"),e.msg||s.title,"hum");
         const gt=$("#gate");$("#gate-s").textContent=e.msg||s.title;
         gsap.to(gt,{opacity:1,y:0,duration:.6,ease:"power4.out"});
         chime();flashTitle(true);
@@ -801,21 +869,21 @@ function applyEvent(e){
         $("#cnt").textContent=(++doneN)+" / "+steps.length;
         cur.gate=null;flashTitle(false);
         gsap.to($("#gate"),{opacity:0,y:-14,duration:.45,ease:"power3.in"});
-        log("voce","aprovado — o time segue","hum");
-        leader("consolidando · proximo passo",false);
+        log(t("you"),t("approved"),"hum");
+        leader(t("consolidating"),false);
       }
     });return;}
   if(e.ev==="Stop"){
     chain("main",async()=>{
       const pending=steps.some(s=>s.status==="pending"||s.status==="running");
       const waiting=steps.some(s=>s.status==="waiting");
-      if(waiting){leader("pausado — resolva no terminal",true);return;}
+      if(waiting){leader(t("pausedGate"),true);return;}
       if(!pending&&steps.length){
         cur.done=true;flashTitle(false);
         focus(300,SH-100,.85);
-        leader("run concluida — veja o resumo no terminal",false);
-        log("leader","time encerrado.","rep");
-      }else leader("leader pausado no terminal",false);
+        leader(t("runDone"),false);
+        log("leader",t("teamEnd"),"rep");
+      }else leader(t("leaderPaused"),false);
     });return;}
 }
 
@@ -824,24 +892,25 @@ function connect(){
   const es=new EventSource("/events");
   const st=$("#status"),stT=$("#status-t");
   es.onopen=()=>{st.className="status live";};
-  es.onerror=()=>{st.className="status dead";stT.textContent="desconectado — tentando de novo";};
+  es.onerror=()=>{st.className="status dead";statusKey="disconnected";stT.textContent=t(statusKey);};
   es.onmessage=m=>{
     let d;try{d=JSON.parse(m.data);}catch{return;}
     if(d.type==="hello"){
-      stT.textContent=d.mode==="replay"?"replay":"ao vivo";
+      statusKey=d.mode==="replay"?"replay":"live";stT.textContent=t(statusKey);
       st.className="status live";
-      $("#c-session").innerHTML=`<span class="d"></span>sessao <b>${(d.session||"—").slice(0,8)}</b>`;
+      SESS=(d.session||"—").slice(0,8);
+      $("#c-session").innerHTML=`<span class="d"></span>${t("session")} <b>${SESS}</b>`;
       $("#c-session").classList.add("ok");
       liveMode=d.mode==="replay"; /* replay anima; live anima depois do batch */
     }
     if(d.type==="batch"){liveMode=false;d.events.forEach(applyEvent);
       chain("main",()=>{liveMode=true;fit();});}
     if(d.type==="event")applyEvent(d.event);
-    if(d.type==="end"){stT.textContent="replay concluido";}
+    if(d.type==="end"){statusKey="replayDone";stT.textContent=t(statusKey);}
   };
 }
 document.title="team-view";
-connect();fit();
+applyLang();connect();fit();
 </script>
 </body>
 </html>
