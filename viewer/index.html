@@ -192,11 +192,12 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .gate .gs{font-family:"Geist Mono",monospace;font-size:9px;color:var(--dim);margin-top:2px}
 .gate .term{font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--hold);
   border:1px solid var(--hold-dim);border-radius:999px;padding:5px 12px;white-space:nowrap}
-.zoom{position:absolute;right:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:2px;
-  background:var(--core-2);border:1px solid var(--hair);border-radius:999px;padding:4px}
+/* raio concentrico: externo (14) = interno (9) + padding (5) */
+.zoom{position:absolute;right:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:3px;
+  background:var(--core-2);border:1px solid var(--hair);border-radius:14px;padding:5px}
 .zoom button{font-family:"Geist Mono",monospace;font-size:11px;color:var(--txt);
   background:var(--hair-soft);border:1px solid var(--hair);min-width:28px;height:27px;
-  padding:0 9px;margin:0 1px;border-radius:9px;cursor:pointer;
+  padding:0 9px;border-radius:9px;cursor:pointer;
   transition:background .4s var(--ease),transform .4s var(--ease)}
 .zoom button:hover{background:var(--hair);transform:translateY(-1px)}
 .zoom button:active{transform:scale(.95)}
