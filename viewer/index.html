@@ -104,7 +104,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .n-shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:20px;padding:5px;
   transition:border-color .6s var(--ease),background .6s var(--ease)}
 .n-core{background:var(--core-2);border-radius:15px;padding:11px 12px;position:relative;overflow:hidden;
-  height:100px;display:flex;flex-direction:column;transition:background .6s var(--ease)}
+  min-height:100px;display:flex;flex-direction:column;transition:background .6s var(--ease)}
 .node.active .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
 .node.done .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
 .node.done .n-lay{color:var(--live)}
@@ -115,8 +115,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
 .node.active .n-lay{color:var(--live)}
 .n-t{font-size:12.5px;line-height:1.35;margin-top:6px;letter-spacing:-.012em;color:var(--dim);
-  flex:1;transition:color .6s var(--ease);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  flex:1;transition:color .6s var(--ease)} /* NUNCA corta: o card cresce (altura uniforme = a do maior) */
 .node.active .n-t,.node.done .n-t{color:var(--txt)}
 .n-f{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
   padding-top:8px;border-top:1px solid var(--hair-soft)}
@@ -376,13 +375,15 @@ function computeLayout(p){
   FLOWY={min:Math.min(...steps.map(s=>s.y)),max:Math.max(...steps.map(s=>s.y))};
   SH=Math.max(720,FLOWY.max+330);
 }
-const DESK=s=>({x:s.x-33,y:s.y+62});
-const SEAT=s=>({x:s.x-18,y:s.y+92});
-const WAIT=s=>({x:s.x-104,y:s.y+56});
+/* geometria em funcao da ALTURA REAL do card (uniforme, medida apos render) */
+let CARD_H=134;
+const DESK=s=>({x:s.x-33,y:s.y+CARD_H/2-5});
+const SEAT=s=>({x:s.x-18,y:s.y+CARD_H/2+25});
+const WAIT=s=>({x:s.x-104,y:s.y+CARD_H/2-11});
 /* zoom do passo ativo: o mais perto possivel SEM cortar a altura do fluxo */
 function stepZoom(){
   if(!steps.length)return .92;
-  const ys=steps.map(s=>s.y),span=(Math.max(...ys)-Math.min(...ys))+340;
+  const ys=steps.map(s=>s.y),span=(Math.max(...ys)-Math.min(...ys))+206+CARD_H;
   return Math.min(1.45,Math.max(.55,(wrap.clientHeight-70)/span));
 }
 const LOUNGE={tv:{x:64,y:0},couch:{x:168,y:0},seat:i=>({x:196+i*26,y:0}),table:{x:230,y:0},plant:[{x:26,y:0},{x:452,y:0}]};
@@ -511,9 +512,9 @@ async function patrol(){
     if(!liveMode){await sleep(600);continue;}
     if(cur.gate){await walk(L,cur.gate.x-64,cur.gate.y+26);await sleep(600);continue;}
     if(cur.step){const s=cur.step;
-      await walk(L,s.x+46,s.y+94);if(cur.step!==s)continue;
+      await walk(L,s.x+46,SEAT(s).y+2);if(cur.step!==s)continue;
       await sleep(700);if(cur.step!==s)continue;
-      await walk(L,s.x+98,s.y+94,110);if(cur.step!==s)continue;
+      await walk(L,s.x+98,SEAT(s).y+2,110);if(cur.step!==s)continue;
       await sleep(700);
     }else await sleep(400);
   }
@@ -522,10 +523,8 @@ async function patrol(){
 
 /* ================= graph build (on plan) ================= */
 function buildGraph(){
-  computeLayout(plan);loungeY();
-  stage.style.width=SW+"px";stage.style.height=SH+"px";
-  edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);
-  EDGES.forEach(([a,b])=>{
+  computeLayout(plan);
+  const buildEdges=()=>EDGES.forEach(([a,b])=>{
     const P=stepsById[a],Q=stepsById[b];
     const x1=P.x+93,x2=Q.x-93,y1=P.y,y2=Q.y;
     let d;
@@ -539,7 +538,7 @@ function buildGraph(){
          a faixa de baixo so vale a direita da lounge. */
       const midFlow=(FLOWY.min+FLOWY.max)/2;
       const useBottom=((y1+y2)/2>midFlow)&&x1>560;
-      const yl=useBottom?FLOWY.max+188:FLOWY.min-138;
+      const yl=useBottom?FLOWY.max+CARD_H/2+121:FLOWY.min-(CARD_H/2+71);
       const r=40;
       d=`M ${x1} ${y1}`+
         ` C ${x1+r} ${y1}, ${x1+r} ${yl}, ${x1+r+34} ${yl}`+
@@ -560,12 +559,24 @@ function buildGraph(){
       <div class="n-check">&#10003;</div></div></div>
       ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
     stage.appendChild(n);nodeEl[s.id]=n;
-    gsap.set(n,{opacity:0,scale:.86,filter:"blur(8px)"});
-    if(!s.human){
-      const d=document.createElement("div");d.className="furn";
-      d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";d.style.opacity=0;
-      d.innerHTML=`<div class="fshadow" style="left:-4px;top:42px;width:76px;height:11px"></div>`+deskSvg();
-      stage.appendChild(d);deskEl[s.id]=d;}});
+    gsap.set(n,{opacity:0,scale:.86,filter:"blur(8px)"});});
+  /* altura uniforme = a do card que mais precisa (titulo nunca corta) */
+  let core=100;
+  steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
+    c.style.height="auto";core=Math.max(core,c.offsetHeight);});
+  steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=core+"px";});
+  CARD_H=core+34;
+  SH=Math.max(720,FLOWY.max+196+CARD_H);
+  loungeY();
+  stage.style.width=SW+"px";stage.style.height=SH+"px";
+  edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);
+  buildEdges();
+  steps.forEach(s=>{ /* mesas: posicao depende da altura real do card */
+    if(s.human)return;
+    const d=document.createElement("div");d.className="furn";
+    d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";d.style.opacity=0;
+    d.innerHTML=`<div class="fshadow" style="left:-4px;top:42px;width:76px;height:11px"></div>`+deskSvg();
+    stage.appendChild(d);deskEl[s.id]=d;});
   /* lounge */
   const rug=document.createElement("div");rug.className="furn";
   rug.style.cssText=`left:44px;top:${LOUNGE.tv.y-14}px;width:452px;height:118px;z-index:1;
