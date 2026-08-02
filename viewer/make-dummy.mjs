@@ -76,7 +76,9 @@ function machineWork({ role, aid }, n) {
   const tools = TOOLS[role];
   for (let i = 0; i < n; i++) { const [tool, info] = tools[i % tools.length]; push(3200, { ev: "PreToolUse", tool, info, agent: NS + role, aid }); }
 }
-function machineStop({ role, aid }) { push(2600, { ev: "SubagentStop", agent: NS + role, aid }); }
+function machineStop({ role, aid }) {
+  push(2600, { ev: "SubagentStop", agent: NS + role, aid, tok: 3800 + (seq * 1723) % 14000 });
+}
 function machine(step, n) { const h = machineStart(step); machineWork(h, n); machineStop(h); }
 function gate(id, msg) {
   push(2200, { ev: "gate", id, status: "waiting", msg });

@@ -73,6 +73,24 @@ async function hookMode() {
   const e = { t: Date.now(), ev: p.hook_event_name };
   if (p.agent_type) e.agent = p.agent_type;
   if (p.agent_id) e.aid = p.agent_id;
+  /* consumo de tokens do subagente: minerado do transcript no encerramento.
+     Formato do transcript e interno/instavel — parser tolerante, falha em silencio. */
+  if (p.hook_event_name === "SubagentStop" && p.agent_transcript_path) {
+    try {
+      let out = 0, ctx = 0;
+      for (const line of fs.readFileSync(p.agent_transcript_path, "utf8").split("\n")) {
+        if (!line.includes('"usage"')) continue;
+        try {
+          const o = JSON.parse(line), u = (o.message && o.message.usage) || o.usage;
+          if (!u) continue;
+          out += u.output_tokens || 0;
+          const i = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+          if (i > ctx) ctx = i;
+        } catch {}
+      }
+      if (out || ctx) e.tok = ctx + out;
+    } catch {}
+  }
   if (p.tool_name) e.tool = p.tool_name;
   if (p.tool_input) {
     e.info = summarize(p.tool_input);

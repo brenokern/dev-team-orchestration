@@ -115,12 +115,16 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
 .node.active .n-lay{color:var(--live)}
 .n-t{font-size:12.5px;line-height:1.35;margin-top:6px;letter-spacing:-.012em;color:var(--dim);
-  flex:1;transition:color .6s var(--ease);overflow:hidden}
+  flex:1;transition:color .6s var(--ease);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .node.active .n-t,.node.done .n-t{color:var(--txt)}
-.n-f{display:flex;align-items:center;justify-content:space-between;margin-top:8px;
+.n-f{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
   padding-top:8px;border-top:1px solid var(--hair-soft)}
-.n-o{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint)}
-.n-tm{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);opacity:0}
+.n-o{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);
+  flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n-tm{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);opacity:0;
+  flex:0 0 auto;white-space:nowrap}
+.node.done .n-o{display:none} /* concluido: o rodape inteiro vira as metricas */
 .node.active .n-tm{opacity:1;color:var(--live)}
 .n-check{position:absolute;top:10px;right:11px;width:15px;height:15px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
@@ -551,7 +555,7 @@ function buildGraph(){
     n.style.left=s.x+"px";n.style.top=s.y+"px";
     const hasIn=EDGES.some(([,b])=>b===s.id),hasOut=EDGES.some(([a])=>a===s.id);
     n.innerHTML=`<div class="n-shell"><div class="n-core">
-      <div class="n-lay">${s.layer||""}</div><div class="n-t">${s.title}</div>
+      <div class="n-lay">${s.layer||""}</div><div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
       <div class="n-f"><span class="n-o">${s.human?"voce":s.owner}</span><span class="n-tm">0s</span></div>
       <div class="n-check">&#10003;</div></div></div>
       ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
@@ -720,8 +724,12 @@ function applyEvent(e){
       s.status="done";
       if(s._pr){s._pr.remove();s._pr=null;}
       const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
-      if(s._start)n.querySelector(".n-tm").textContent=
-        (s._tools||0)+" acoes · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s";
+      if(s._start){
+        const fmtTok=t=>t>=1000?(t/1000).toFixed(1)+"k":String(t);
+        n.querySelector(".n-tm").textContent=
+          (s._tools||0)+" acoes · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s"+
+          (e.tok?" · "+fmtTok(e.tok)+" tok":"");
+      }
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
       EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
