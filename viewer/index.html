@@ -158,17 +158,19 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .pulse{position:absolute;width:56px;height:56px;border-radius:16px;border:1.5px solid var(--live);
   z-index:4;pointer-events:none;opacity:0}
 .pulse.h{border-color:var(--hold)}
-/* balao de pensamento: o comando atual do subagente */
-.think{position:absolute;z-index:7;max-width:210px;pointer-events:none;opacity:0;
-  transform:translate(-12%,-100%);
-  font-family:"Geist Mono",monospace;font-size:8.5px;line-height:1.55;color:var(--dim);
-  background:var(--shell);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
-  border:1px solid var(--hair-soft);border-radius:13px;padding:6px 10px;
-  word-break:break-word}
-.think::after{content:"";position:absolute;left:20px;bottom:-7px;width:6px;height:6px;
-  border-radius:50%;background:var(--shell);border:1px solid var(--hair-soft)}
-.think::before{content:"";position:absolute;left:12px;bottom:-13px;width:4px;height:4px;
-  border-radius:50%;background:var(--shell);border:1px solid var(--hair-soft)}
+/* balao de pensamento: etereo, centralizado na cabeca do personagem */
+.think{position:absolute;z-index:7;width:max-content;max-width:172px;pointer-events:none;opacity:0;
+  font-family:"Geist Mono",monospace;font-size:8.5px;line-height:1.55;color:var(--faint);
+  text-align:center;word-break:break-word;
+  background:var(--shell);backdrop-filter:blur(12px) saturate(1.15);
+  -webkit-backdrop-filter:blur(12px) saturate(1.15);
+  border:1px solid var(--hair-soft);border-radius:18px;padding:7px 13px}
+.think::after{content:"";position:absolute;left:50%;bottom:-8px;width:7px;height:7px;
+  transform:translateX(-50%);border-radius:50%;
+  background:var(--shell);backdrop-filter:blur(8px);border:1px solid var(--hair-soft)}
+.think::before{content:"";position:absolute;left:50%;bottom:-16px;width:4px;height:4px;
+  transform:translateX(-130%);border-radius:50%;
+  background:var(--shell);border:1px solid var(--hair-soft)}
 /* janela de teste do ux-intern */
 .uxwin{position:absolute;z-index:8;width:236px;pointer-events:none;opacity:0;
   background:var(--core-2);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
@@ -609,19 +611,34 @@ function ensureTok(role,s){
   return t;
 }
 
-/* balao de pensamento: o comando atual sai da cabeca do personagem */
+/* balao de pensamento: nasce da cabeca, centralizado, flutuando enquanto pensa */
 function think(role,text){
   const t=toks[role];if(!t||!liveMode)return;
   let b=bubbles[role];
-  if(!b){b=document.createElement("div");b.className="think";stage.appendChild(b);bubbles[role]=b;}
-  b.textContent=text.slice(0,120);
-  const x=parseFloat(t.el.style.left),y=parseFloat(t.el.style.top);
-  b.style.left=(x+26)+"px";b.style.top=(y-10)+"px";
-  gsap.killTweensOf(b);
-  gsap.fromTo(b,{opacity:0,y:6,filter:"blur(6px)"},
-    {opacity:.9,y:0,filter:"blur(0px)",duration:.45,ease:"power3.out"});
+  if(!b){
+    b=document.createElement("div");b.className="think";stage.appendChild(b);bubbles[role]=b;
+    /* xPercent/yPercent no GSAP: o tween de y COMPOE com a centralizacao em vez de sobrescrever */
+    gsap.set(b,{xPercent:-50,yPercent:-100});
+    b._vis=false;
+  }
+  b.textContent=text.length>72?text.slice(0,70)+"…":text;
+  const x=parseFloat(t.el.style.left)+18,y=parseFloat(t.el.style.top)-14;
+  b.style.left=x+"px";b.style.top=y+"px";
   clearTimeout(b._to);
-  b._to=setTimeout(()=>gsap.to(b,{opacity:0,y:-6,filter:"blur(5px)",duration:.7,ease:"power2.in"}),3200);
+  if(!b._vis){ /* entrada: condensa do nada e comeca a flutuar */
+    b._vis=true;
+    if(b._float)b._float.kill();
+    gsap.killTweensOf(b);
+    gsap.set(b,{xPercent:-50,yPercent:-100});
+    gsap.fromTo(b,{opacity:0,y:12,scale:.85,filter:"blur(9px)"},
+      {opacity:.78,y:0,scale:1,filter:"blur(0px)",duration:.6,ease:"power3.out",
+       onComplete:()=>{b._float=gsap.to(b,{y:"-=6",duration:1.9,ease:"sine.inOut",yoyo:true,repeat:-1});}});
+  }
+  b._to=setTimeout(()=>{
+    b._vis=false;
+    if(b._float){b._float.kill();b._float=null;}
+    gsap.to(b,{opacity:0,y:-10,filter:"blur(7px)",duration:.85,ease:"power2.in"});
+  },3500);
 }
 
 /* janela de teste do ux-intern: navegador em miniatura com cursor "testando" */
