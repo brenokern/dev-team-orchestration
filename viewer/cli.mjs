@@ -115,8 +115,16 @@ const server = http.createServer((req, res) => {
     res.end(fs.readFileSync(file));
   } catch (e) { res.writeHead(500); res.end("viewer/index.html nao encontrado"); }
 });
-server.listen(PORT, () => {
-  const url = `http://localhost:${PORT}`;
+/* porta ocupada (outro viewer vivo)? tenta as proximas em vez de morrer */
+let port = PORT;
+server.on("error", e => {
+  if (e.code === "EADDRINUSE" && port < PORT + 20) {
+    console.log(`team-view: porta ${port} ocupada, tentando ${port + 1}…`);
+    port++; setTimeout(() => server.listen(port), 120);
+  } else { console.error("team-view: " + e.message); process.exit(1); }
+});
+server.listen(port, () => {
+  const url = `http://localhost:${server.address().port}`;
   console.log(`team-view ${src.mode} em ${url}` + (src.session ? ` (sessao ${src.session.slice(0, 8)})` : ""));
   startTail();
   if (OPEN) {
