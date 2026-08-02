@@ -254,6 +254,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
       <div class="zoom">
         <button id="z-out">&minus;</button><span class="lv" id="z-lv">100%</span>
         <button id="z-in">+</button><button id="z-fit" style="font-size:9px">fit</button>
+        <button id="z-focus" style="font-size:9px;width:auto;padding:0 10px" title="centraliza no passo em execucao">foco</button>
       </div>
       <div class="status" id="status"><span class="d"></span><span id="status-t">conectando…</span></div>
     </div>
@@ -409,7 +410,7 @@ function fit(){const w=wrap.clientWidth,h=wrap.clientHeight;
   k=Math.min((w-60)/SW,(h-70)/SH);ox=(w-SW*k)/2;oy=(h-SH*k)/2;apply();}
 function zoomAt(f,cx,cy){const nk=Math.min(2.4,Math.max(.18,k*f));
   ox=cx-(cx-ox)*(nk/k);oy=cy-(cy-oy)*(nk/k);k=nk;apply();}
-function focus(x,y,zk){if(!liveMode)return;
+function focus(x,y,zk,force){if(!liveMode&&!force)return;
   if(cam)cam.kill();
   const w=wrap.clientWidth,h=wrap.clientHeight,tk=zk||k;
   const o={a:ox,b:oy,c:k};
@@ -418,6 +419,14 @@ function focus(x,y,zk){if(!liveMode)return;
 $("#z-in").onclick=()=>zoomAt(1.22,wrap.clientWidth/2,wrap.clientHeight/2);
 $("#z-out").onclick=()=>zoomAt(1/1.22,wrap.clientWidth/2,wrap.clientHeight/2);
 $("#z-fit").onclick=()=>{if(cam)cam.kill();fit();};
+$("#z-focus").onclick=()=>{ /* centraliza no que importa AGORA */
+  const s=steps.find(x=>x.status==="waiting")   /* gate esperando voce vence */
+        ||cur.step
+        ||steps.find(x=>x.status==="running")
+        ||[...steps].reverse().find(x=>x.status==="done");
+  if(s)focus(s.x,s.y+40,stepZoom(),true);
+  else if(steps.length)focus(300,SH-100,.85,true); /* run acabou: lounge */
+};
 wrap.addEventListener("wheel",e=>{e.preventDefault();if(cam)cam.kill();
   const r=wrap.getBoundingClientRect();
   zoomAt(e.deltaY<0?1.11:1/1.11,e.clientX-r.left,e.clientY-r.top);},{passive:false});
