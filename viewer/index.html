@@ -109,6 +109,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .node.done .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
 .node.done .n-lay{color:var(--live)}
 .node.done .n-check{background:var(--live);color:var(--bg)}
+.node.done .n-tm{opacity:1;color:var(--live)} /* metricas finais ficam no card */
 .node.humc.done .n-shell{border-style:solid;border-color:var(--live-dim);background:var(--live-soft);animation:none}
 .n-lay{font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
@@ -353,10 +354,7 @@ const A=role=>role==="leader"?LEADER:{id:role,...colorOf(role)};
 
 /* ================= layout from plan ================= */
 const CARD_W=176,COLW=240,X0=180,MIDY=340,ROWGAP=232;
-/* corredor livre p/ arestas longas: abaixo do card+mesa de uma fileira,
-   acima do card da fileira seguinte */
-const LANE=140;
-let plan=null,steps=[],stepsById={},EDGES=[],SW=1600,SH=720;
+let plan=null,steps=[],stepsById={},EDGES=[],SW=1600,SH=720,FLOWY={min:340,max:340};
 function computeLayout(p){
   steps=p.steps.map(s=>({...s,deps:s.deps||[],status:"pending"}));
   stepsById={};steps.forEach(s=>stepsById[s.id]=s);
@@ -371,7 +369,8 @@ function computeLayout(p){
     list.forEach((s,i)=>{s.x=X0+s._c*COLW;s.y=MIDY+(i-(list.length-1)/2)*ROWGAP;});});
   EDGES=[];steps.forEach(s=>s.deps.forEach(d=>EDGES.push([d,s.id])));
   SW=X0+Math.max(...steps.map(s=>s._c))*COLW+300;
-  SH=Math.max(720,MIDY+((maxRows-1)/2)*ROWGAP+330);
+  FLOWY={min:Math.min(...steps.map(s=>s.y)),max:Math.max(...steps.map(s=>s.y))};
+  SH=Math.max(720,FLOWY.max+330);
 }
 const DESK=s=>({x:s.x-33,y:s.y+62});
 const SEAT=s=>({x:s.x-18,y:s.y+92});
@@ -494,10 +493,12 @@ function log(who,what,cls){
   stream.scrollTop=stream.scrollHeight;$("#ec").textContent=++evN;
 }
 const leader=(t,scan)=>{$("#lm").textContent=t;$("#lc").classList.toggle("scan",!!scan);};
-setInterval(()=>{ /* timers dos cards ativos */
+setInterval(()=>{ /* timers dos cards ativos: N acoes · Ns */
   steps.forEach(s=>{
     if((s.status==="running"||s.status==="waiting")&&s._start){
-      const n=nodeEl[s.id];if(n)n.querySelector(".n-tm").textContent=((Date.now()-s._start)/1000).toFixed(0)+"s";}});
+      const n=nodeEl[s.id];if(!n)return;
+      const secs=((Date.now()-s._start)/1000).toFixed(0)+"s";
+      n.querySelector(".n-tm").textContent=s.human?secs:((s._tools||0)+" acoes · "+secs);}});
 },500);
 
 async function patrol(){
@@ -529,13 +530,17 @@ function buildGraph(){
       const dx=Math.max(26,Math.min(72,(x2-x1)*.45));
       d=`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`;
     }else{
-      /* aresta longa: rota PERIFERICA pelo corredor entre as fileiras,
-         respeitando cards, mesas e personagens das colunas intermediarias */
-      const yc=Math.min(y1,y2)+LANE,r=40;
+      /* aresta longa: SAI do fluxo, viaja por fora e reentra.
+         Por cima ou por baixo conforme a posicao dos dois pontos;
+         a faixa de baixo so vale a direita da lounge. */
+      const midFlow=(FLOWY.min+FLOWY.max)/2;
+      const useBottom=((y1+y2)/2>midFlow)&&x1>560;
+      const yl=useBottom?FLOWY.max+188:FLOWY.min-138;
+      const r=40;
       d=`M ${x1} ${y1}`+
-        ` C ${x1+r} ${y1}, ${x1+r} ${yc}, ${x1+r+34} ${yc}`+
-        ` L ${x2-r-34} ${yc}`+
-        ` C ${x2-r} ${yc}, ${x2-r} ${y2}, ${x2} ${y2}`;
+        ` C ${x1+r} ${y1}, ${x1+r} ${yl}, ${x1+r+34} ${yl}`+
+        ` L ${x2-r-34} ${yl}`+
+        ` C ${x2-r} ${yl}, ${x2-r} ${y2}, ${x2} ${y2}`;
     }
     const p=document.createElementNS("http://www.w3.org/2000/svg","path");
     p.setAttribute("d",d);
@@ -700,6 +705,7 @@ function applyEvent(e){
     const line=(e.tool||"")+" "+shortPath(e.info);
     log(who,line);
     think(role,line);
+    const st=aidStep[e.aid];if(st)st._tools=(st._tools||0)+1;
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) */
     if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
@@ -714,6 +720,8 @@ function applyEvent(e){
       s.status="done";
       if(s._pr){s._pr.remove();s._pr=null;}
       const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
+      if(s._start)n.querySelector(".n-tm").textContent=
+        (s._tools||0)+" acoes · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s";
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
       EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
