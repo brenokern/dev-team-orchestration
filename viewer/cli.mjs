@@ -26,7 +26,7 @@ const opt = (name, def) => {
 const PORT = parseInt(opt("port", "4517"), 10);
 const OPEN = args.includes("--open");
 const REPLAY = opt("replay", null);
-const SPEED = parseFloat(opt("speed", "25"));
+const SPEED = parseFloat(opt("speed", "6")); /* 6x o tempo real: assistivel; suba p/ resumo */
 
 function resolveFile() {
   if (REPLAY) return { file: path.resolve(String(REPLAY)), mode: "replay" };
