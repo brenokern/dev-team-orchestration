@@ -122,19 +122,23 @@ no dispatch desse passo.
    - Achou problema → re-despache **só o passo culpado** com o feedback; repita até aprovar. Não
      avance com pendência.
 
-### N+1. QA (uma vez, no fim — não por camada)
+### N+1. QA (uma vez, no fim — não por camada; MODO ENXUTO por padrão)
 Despache `qa-intern`: `pnpm lint` + `pnpm build` sempre; testes = **só os specs afetados** pela
-mudança (`pnpm test -- <arquivos>`), não a suíte inteira — rode `test:cov`/`test:e2e` completos
-só se a mudança for ampla ou o reviewer pedir. Falhou → volta pro dono do passo culpado com o
-log; re-QA depois do fix.
+mudança (`pnpm test -- <arquivos>`), não a suíte inteira — `test:cov`/`test:e2e` completos SÓ
+por ordem explícita sua (mudança ampla ou pedido do reviewer). O qa-intern trabalha em dieta de
+tokens (saída via arquivo + tail/grep, sem ler código, ~8 tool calls); se ele estourar isso,
+o problema é do dono do passo, não dele. Falhou → volta pro dono do passo culpado com o trecho
+do log; re-QA depois do fix.
 
-### N+2. UI/UX (só se a feature tem frontend)
-Despache `ux-intern` (opus): sobe o front e usa **Playwright** para navegar os fluxos da feature
-como **ADMIN e como INDIVIDUAL**, valida o gating de UI, tira screenshots por estado, roda
-checagem de acessibilidade (axe) e produz um relatório de UX. Achados de bug/UX → voltam pro
-`frontend-intern`; achados de a11y sérios idem. Pré-requisitos de ambiente estão em
-`references/agents/ux.md` (usuário de teste no seed, app rodando). Se o ambiente não estiver
-pronto, o ux-intern reporta o setup necessário em vez de falhar silenciosamente.
+### N+2. UI/UX (só se a feature tem frontend; MODO ENXUTO por padrão)
+Despache `ux-intern` (opus): sobe o front e usa **Playwright** num ÚNICO spec com os fluxos DA
+FEATURE como **ADMIN e como INDIVIDUAL** (caminho feliz + isolamento), valida o gating de UI do
+plano e roda axe só nas páginas novas/alteradas (serious/critical). 1 screenshot por papel + 1
+por falha; ~12 tool calls. Estados de loading/vazio/erro e o UX heurístico
+(design-critique/ui-ux-pro-max) são o **modo completo** — só quando VOCÊ pedir "UX completo" no
+dispatch. Achados de bug/UX → voltam pro `frontend-intern`; a11y séria idem. Pré-requisitos de
+ambiente em `references/agents/ux.md`; ambiente que não sobe em ~2 min → o ux-intern reporta o
+setup pendente em vez de insistir.
 
 ### N+3. Revisão final
 Despache `reviewer-intern` no diff **inteiro** da branch (integração entre camadas, não só cada

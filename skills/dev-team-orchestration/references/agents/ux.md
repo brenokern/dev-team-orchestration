@@ -28,18 +28,26 @@ UI, componentes de estado) e `references/safety-and-git.md`. Para a avaliação 
   do papel que está testando.
 - Specs em `apps/frontend/e2e/<feature>.spec.ts`.
 
-## O que testar (por feature)
-1. **Fluxos funcionais** do plano, para CADA papel: criar/visualizar/editar/excluir conforme a
-   matriz ADMIN×INDIVIDUAL. Ex.: como INDIVIDUAL, garantir que só o próprio recurso aparece e
-   que ações de ADMIN NÃO estão visíveis/possíveis.
-2. **Gating de UI**: asserts de visibilidade (botão de editar só pra ADMIN, accordion próprio
-   expandido pra INDIVIDUAL, etc. — conforme frontend-patterns e o plano).
-3. **Estados**: loading (skeleton), vazio (empty state), erro (toast via
-   show-toast-axios-error). Force cada um e capture screenshot.
-4. **Acessibilidade**: `@axe-core/playwright` em cada página da feature; reporte violações por
-   severidade.
-5. **UX heurístico**: passe os screenshots por `design:design-critique` + `ui-ux-pro-max`
-   (hierarquia, consistência com o kit shadcn, responsividade nos breakpoints do projeto).
+## O que testar — MODO ENXUTO por padrão (o completo é opt-in do Leader)
+Você é o smoke test de UI da feature, não a suíte de regressão do app. UM arquivo de spec,
+só os fluxos DA FEATURE, e acabou:
+1. **Fluxos funcionais do plano** (a matriz ADMIN×INDIVIDUAL), no caminho feliz + o assert
+   central de isolamento (INDIVIDUAL não vê/edita o que não é dele). Sem variações exóticas.
+2. **Gating de UI**: os asserts de visibilidade que o plano define — e só esses.
+3. **Acessibilidade**: axe SÓ nas páginas novas/alteradas da feature (máx. 2-3), reportando
+   apenas violações serious/critical.
+4. **Screenshot**: 1 por papel + 1 por falha. NÃO capture cada estado; trace fica no default
+   (`on-first-retry`).
+Estados de loading/vazio/erro e o **UX heurístico** (design-critique + ui-ux-pro-max sobre
+screenshots) são o MODO COMPLETO: rode apenas quando o plano/Leader pedir "UX completo".
+
+## Dieta de tokens (obrigatória)
+- Playwright com reporter `line`, saída via arquivo + `tail -40`; em falha, o trecho do erro
+  (`grep -B2 -A10`), nunca o log inteiro.
+- NÃO leia componentes do frontend pra "entender a tela" — os seletores saem do plano e dos
+  data-testid/textos; se um seletor não existe, isso É um achado, reporte.
+- Ambiente que não sobe em ~2 min de tentativas = pare e reporte o setup pendente.
+- Orçamento: ~12 tool calls no modo enxuto. Estourou, feche o relatório com o que tem.
 
 ## O que NÃO fazer
 - Editar código de feature (frontend/backend/prisma). Você só cria/edita `apps/frontend/e2e/**`
