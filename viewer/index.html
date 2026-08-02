@@ -124,6 +124,15 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .n-check{position:absolute;top:10px;right:11px;width:15px;height:15px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
   opacity:0;transform:scale(.5)}
+/* portas de conexao nas bordas do card */
+.p-in,.p-out{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;
+  transform:translateY(-50%);z-index:2;background:var(--core-2);
+  border:1.5px solid var(--edge-past);transition:border-color .6s var(--ease)}
+.p-in{left:-5px}.p-out{right:-5px}
+.node.active .p-in{border-color:var(--live)}
+.node.done .p-in,.node.done .p-out{border-color:var(--live)}
+.node.humc .p-in,.node.humc .p-out{border-color:var(--hold-dim)}
+.node.humc.done .p-in,.node.humc.done .p-out{border-color:var(--live)}
 .node.humc .n-shell{border:1px dashed var(--hold-dim)}
 .node.humc .n-lay,.node.humc .n-o{color:var(--hold)}
 .node.humc.active .n-shell{border-style:solid;border-color:var(--hold);background:var(--hold-soft);
@@ -343,7 +352,10 @@ function colorOf(role){
 const A=role=>role==="leader"?LEADER:{id:role,...colorOf(role)};
 
 /* ================= layout from plan ================= */
-const CARD_W=176,COLW=240,X0=180,MIDY=340,ROWGAP=180;
+const CARD_W=176,COLW=240,X0=180,MIDY=340,ROWGAP=232;
+/* corredor livre p/ arestas longas: abaixo do card+mesa de uma fileira,
+   acima do card da fileira seguinte */
+const LANE=140;
 let plan=null,steps=[],stepsById={},EDGES=[],SW=1600,SH=720;
 function computeLayout(p){
   steps=p.steps.map(s=>({...s,deps:s.deps||[],status:"pending"}));
@@ -509,20 +521,35 @@ function buildGraph(){
   stage.style.width=SW+"px";stage.style.height=SH+"px";
   edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);
   EDGES.forEach(([a,b])=>{
-    /* curvas curtas e sem overshoot: menos cruzamento visual em fan-out/fan-in */
     const P=stepsById[a],Q=stepsById[b];
-    const x1=P.x+92,x2=Q.x-92,dx=Math.max(26,Math.min(72,(x2-x1)*.45));
+    const x1=P.x+93,x2=Q.x-93,y1=P.y,y2=Q.y;
+    let d;
+    if(Q._c-P._c<=1){
+      /* colunas vizinhas: o vao entre colunas e livre — curva direta e curta */
+      const dx=Math.max(26,Math.min(72,(x2-x1)*.45));
+      d=`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`;
+    }else{
+      /* aresta longa: rota PERIFERICA pelo corredor entre as fileiras,
+         respeitando cards, mesas e personagens das colunas intermediarias */
+      const yc=Math.min(y1,y2)+LANE,r=40;
+      d=`M ${x1} ${y1}`+
+        ` C ${x1+r} ${y1}, ${x1+r} ${yc}, ${x1+r+34} ${yc}`+
+        ` L ${x2-r-34} ${yc}`+
+        ` C ${x2-r} ${yc}, ${x2-r} ${y2}, ${x2} ${y2}`;
+    }
     const p=document.createElementNS("http://www.w3.org/2000/svg","path");
-    p.setAttribute("d",`M ${x1} ${P.y} C ${x1+dx} ${P.y}, ${x2-dx} ${Q.y}, ${x2} ${Q.y}`);
+    p.setAttribute("d",d);
     edgesSvg.appendChild(p);pathEl[a+">"+b]=p;
     const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;});
   steps.forEach(s=>{
     const n=document.createElement("div");n.className="node"+(s.human?" humc":"");
     n.style.left=s.x+"px";n.style.top=s.y+"px";
+    const hasIn=EDGES.some(([,b])=>b===s.id),hasOut=EDGES.some(([a])=>a===s.id);
     n.innerHTML=`<div class="n-shell"><div class="n-core">
       <div class="n-lay">${s.layer||""}</div><div class="n-t">${s.title}</div>
       <div class="n-f"><span class="n-o">${s.human?"voce":s.owner}</span><span class="n-tm">0s</span></div>
-      <div class="n-check">&#10003;</div></div></div>`;
+      <div class="n-check">&#10003;</div></div></div>
+      ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
     stage.appendChild(n);nodeEl[s.id]=n;
     gsap.set(n,{opacity:0,scale:.86,filter:"blur(8px)"});
     if(!s.human){
