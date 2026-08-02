@@ -99,14 +99,17 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .edges path{fill:none;stroke:var(--edge);stroke-width:1.6;stroke-linecap:round;
   transition:stroke .6s var(--ease)}
 .edges path.lit{stroke:var(--live-dim)}
-.edges path.past{stroke:var(--edge-past)}
+.edges path.past{stroke:var(--live-dim)} /* trajeto concluido fica verde */
 .node{position:absolute;width:176px;transform:translate(-50%,-50%);opacity:0}
 .n-shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:20px;padding:5px;
   transition:border-color .6s var(--ease),background .6s var(--ease)}
 .n-core{background:var(--core-2);border-radius:15px;padding:11px 12px;position:relative;overflow:hidden;
   height:100px;display:flex;flex-direction:column;transition:background .6s var(--ease)}
 .node.active .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
-.node.done .n-shell{border-color:var(--hair)}
+.node.done .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
+.node.done .n-lay{color:var(--live)}
+.node.done .n-check{background:var(--live);color:var(--bg)}
+.node.humc.done .n-shell{border-style:solid;border-color:var(--live-dim);background:var(--live-soft);animation:none}
 .n-lay{font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
 .node.active .n-lay{color:var(--live)}
@@ -155,6 +158,29 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .pulse{position:absolute;width:56px;height:56px;border-radius:16px;border:1.5px solid var(--live);
   z-index:4;pointer-events:none;opacity:0}
 .pulse.h{border-color:var(--hold)}
+/* balao de pensamento: o comando atual do subagente */
+.think{position:absolute;z-index:7;max-width:210px;pointer-events:none;opacity:0;
+  transform:translate(-12%,-100%);
+  font-family:"Geist Mono",monospace;font-size:8.5px;line-height:1.55;color:var(--dim);
+  background:var(--shell);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  border:1px solid var(--hair-soft);border-radius:13px;padding:6px 10px;
+  word-break:break-word}
+.think::after{content:"";position:absolute;left:20px;bottom:-7px;width:6px;height:6px;
+  border-radius:50%;background:var(--shell);border:1px solid var(--hair-soft)}
+.think::before{content:"";position:absolute;left:12px;bottom:-13px;width:4px;height:4px;
+  border-radius:50%;background:var(--shell);border:1px solid var(--hair-soft)}
+/* janela de teste do ux-intern */
+.uxwin{position:absolute;z-index:8;width:236px;pointer-events:none;opacity:0;
+  background:var(--core-2);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
+.uxwin .wh{display:flex;gap:4px;padding:7px 10px;border-bottom:1px solid var(--hair-soft);align-items:center}
+.uxwin .wd{width:6px;height:6px;border-radius:50%;background:var(--hair)}
+.uxwin .wt{font-family:"Geist Mono",monospace;font-size:8px;color:var(--faint);margin-left:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.uxwin .wb{position:relative;height:118px;padding:11px}
+.uxwin .sk{background:var(--hair-soft);border-radius:5px}
+.uxwin .cur{position:absolute;z-index:2;width:11px;height:11px;color:var(--txt)}
+.uxwin .ring{position:absolute;z-index:1;width:18px;height:18px;border-radius:50%;
+  border:1.5px solid var(--live);opacity:0}
 .gatewrap{position:absolute;left:0;right:0;top:16px;z-index:22;display:flex;
   justify-content:center;pointer-events:none}
 .gate{display:flex;align-items:center;gap:12px;background:var(--core-2);
@@ -348,6 +374,12 @@ function computeLayout(p){
 const DESK=s=>({x:s.x-33,y:s.y+62});
 const SEAT=s=>({x:s.x-18,y:s.y+92});
 const WAIT=s=>({x:s.x-104,y:s.y+56});
+/* zoom do passo ativo: o mais perto possivel SEM cortar a altura do fluxo */
+function stepZoom(){
+  if(!steps.length)return .92;
+  const ys=steps.map(s=>s.y),span=(Math.max(...ys)-Math.min(...ys))+340;
+  return Math.min(1.45,Math.max(.55,(wrap.clientHeight-70)/span));
+}
 const LOUNGE={tv:{x:64,y:0},couch:{x:168,y:0},seat:i=>({x:196+i*26,y:0}),table:{x:230,y:0},plant:[{x:26,y:0},{x:452,y:0}]};
 function loungeY(){const base=SH-124;
   LOUNGE.tv.y=base-16;LOUNGE.couch.y=base+14;LOUNGE.table.y=base+56;
@@ -357,8 +389,10 @@ function loungeY(){const base=SH-124;
 const stage=$("#stage"),edgesSvg=$("#edges"),stream=$("#stream"),wrap=$("#wrap");
 const nodeEl={},pathEl={},deskEl={},rowEl={};
 let toks={},seatN=0,evN=0,snd=true,doneN=0;
-const roleState={}; /* role -> {aidSet,current,queueChain} */
-const aidRole={};
+const aidRole={};   /* agent_id -> papel */
+const aidStep={};   /* agent_id -> passo (suporta lote paralelo do MESMO papel) */
+const charStep={};  /* papel -> passo onde o personagem esta sentado */
+const bubbles={};   /* papel -> balao de pensamento */
 const cur={step:null,gate:null,done:false};
 let liveMode=false; /* false durante o batch de catch-up */
 
@@ -485,9 +519,11 @@ function buildGraph(){
   stage.style.width=SW+"px";stage.style.height=SH+"px";
   edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);
   EDGES.forEach(([a,b])=>{
-    const P=stepsById[a],Q=stepsById[b],mx=(P.x+Q.x)/2;
+    /* curvas curtas e sem overshoot: menos cruzamento visual em fan-out/fan-in */
+    const P=stepsById[a],Q=stepsById[b];
+    const x1=P.x+92,x2=Q.x-92,dx=Math.max(26,Math.min(72,(x2-x1)*.45));
     const p=document.createElementNS("http://www.w3.org/2000/svg","path");
-    p.setAttribute("d",`M ${P.x+92} ${P.y} C ${mx} ${P.y}, ${mx} ${Q.y}, ${Q.x-92} ${Q.y}`);
+    p.setAttribute("d",`M ${x1} ${P.y} C ${x1+dx} ${P.y}, ${x2-dx} ${Q.y}, ${x2} ${Q.y}`);
     edgesSvg.appendChild(p);pathEl[a+">"+b]=p;
     const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;});
   steps.forEach(s=>{
@@ -516,8 +552,11 @@ function buildGraph(){
   add(LOUNGE.couch.x,LOUNGE.couch.y,`<div class="fshadow" style="left:0;top:52px;width:274px;height:14px"></div>`+couchSvg());
   add(LOUNGE.table.x,LOUNGE.table.y,`<div class="fshadow" style="left:2px;top:24px;width:52px;height:9px"></div>`+tableSvg());
   LOUNGE.plant.forEach(p=>add(p.x,p.y,`<div class="fshadow" style="left:2px;top:44px;width:34px;height:8px"></div>`+plantSvg()));
-  /* roster: donos dos passos + roster extra do plano */
-  const roles=[...new Set([...(plan.roster||[]).map(r=>r.id||r),...steps.filter(s=>!s.human).map(s=>s.owner)])];
+  /* roster: SEMPRE os 9 papeis do time, + qualquer extra do plano */
+  const CANON=["data-intern","backend-intern","ai-intern","frontend-intern","infra-intern",
+               "qa-intern","ux-intern","reviewer-intern","pr-writer-intern"];
+  const roles=[...new Set([...CANON,...(plan.roster||[]).map(r=>r.id||r),
+               ...steps.filter(s=>!s.human).map(s=>s.owner)])];
   roles.forEach(role=>{
     const a=A(role),meta=(plan.roster||[]).find(r=>(r.id||r)===role);
     const r=document.createElement("div");r.className="row";
@@ -570,6 +609,64 @@ function ensureTok(role,s){
   return t;
 }
 
+/* balao de pensamento: o comando atual sai da cabeca do personagem */
+function think(role,text){
+  const t=toks[role];if(!t||!liveMode)return;
+  let b=bubbles[role];
+  if(!b){b=document.createElement("div");b.className="think";stage.appendChild(b);bubbles[role]=b;}
+  b.textContent=text.slice(0,120);
+  const x=parseFloat(t.el.style.left),y=parseFloat(t.el.style.top);
+  b.style.left=(x+26)+"px";b.style.top=(y-10)+"px";
+  gsap.killTweensOf(b);
+  gsap.fromTo(b,{opacity:0,y:6,filter:"blur(6px)"},
+    {opacity:.9,y:0,filter:"blur(0px)",duration:.45,ease:"power3.out"});
+  clearTimeout(b._to);
+  b._to=setTimeout(()=>gsap.to(b,{opacity:0,y:-6,filter:"blur(5px)",duration:.7,ease:"power2.in"}),3200);
+}
+
+/* janela de teste do ux-intern: navegador em miniatura com cursor "testando" */
+let uxwin=null,uxTl=null,uxHide=null;
+function uxShow(text){
+  const t=toks["ux-intern"];if(!t||!liveMode)return;
+  if(!uxwin){
+    uxwin=document.createElement("div");uxwin.className="uxwin";
+    uxwin.innerHTML=`<div class="wh"><span class="wd"></span><span class="wd"></span><span class="wd"></span>
+      <span class="wt" id="uxwt"></span></div>
+      <div class="wb">
+        <div class="sk" style="width:60%;height:10px;margin-bottom:9px"></div>
+        <div class="sk" style="width:92%;height:7px;margin-bottom:6px"></div>
+        <div class="sk" style="width:84%;height:7px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <div class="sk" style="flex:1;height:38px"></div>
+          <div class="sk" style="flex:1;height:38px"></div>
+          <div class="sk" style="flex:1;height:38px"></div>
+        </div>
+        <div class="sk" style="width:34%;height:13px;margin-top:12px;background:var(--live-soft)"></div>
+        <div class="ring" id="uxring"></div>
+        <svg class="cur" id="uxcur" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+          <path d="M1 1 L1 10 L3.5 7.8 L5 11 L6.8 10.2 L5.3 7 L9 7 Z"/></svg>
+      </div>`;
+    stage.appendChild(uxwin);
+  }
+  uxwin.querySelector("#uxwt").textContent=text.slice(0,60);
+  const x=parseFloat(t.el.style.left),y=parseFloat(t.el.style.top);
+  uxwin.style.left=(x-70)+"px";uxwin.style.top=(y-190)+"px";
+  gsap.to(uxwin,{opacity:1,duration:.5,ease:"power3.out"});
+  if(!uxTl){ /* cursor passeia e clica em alvos aleatorios do esqueleto */
+    const cur=uxwin.querySelector("#uxcur"),ring=uxwin.querySelector("#uxring");
+    gsap.set(cur,{x:20,y:30});
+    uxTl=gsap.timeline({repeat:-1,repeatRefresh:true});
+    uxTl.to(cur,{x:()=>14+Math.random()*190,y:()=>18+Math.random()*88,
+        duration:1.1,ease:"power2.inOut"})
+      .add(()=>{const cx=gsap.getProperty(cur,"x"),cy=gsap.getProperty(cur,"y");
+        gsap.fromTo(ring,{x:cx-4,y:cy-4,opacity:.8,scale:.4},
+          {opacity:0,scale:1.6,duration:.6,ease:"power2.out"});})
+      .to({},{duration:.5});
+  }
+  clearTimeout(uxHide);
+  uxHide=setTimeout(()=>gsap.to(uxwin,{opacity:0,duration:.6}),8000);
+}
+
 function applyEvent(e){
   if(e.agent)e.agent=norm(e.agent);
   if(e.sub)e.sub=norm(e.sub);
@@ -577,6 +674,7 @@ function applyEvent(e){
   if(!plan)return; /* eventos antes do plano: so log do leader */
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
+    const aid=e.aid||role+"#"+Date.now();
     chain(role,async()=>{
       const s=nextPending(role);
       if(!s){ /* dispatch fora do plano (ex.: consulta avulsa): mostra sem quebrar */
@@ -585,19 +683,22 @@ function applyEvent(e){
         log(role.replace("-intern",""),"trabalhando (passo fora do plan-graph)");
         return;}
       s.status="running";s._start=e.t||Date.now();
-      roleState[role]=s;
+      aidStep[aid]=s;
       const t=ensureTok(role,s);
-      focus(s.x,s.y+40,.92);
-      await walk(t,SEAT(s).x,SEAT(s).y);
-      stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
+      focus(s.x,s.y+40,stepZoom());
+      if(!charStep[role]){ /* personagem livre: senta NESTE passo */
+        await walk(t,SEAT(s).x,SEAT(s).y);
+        stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
+        charStep[role]=s;
+        if(liveMode){
+          const pr=document.createElement("div");pr.className="pulse";
+          pr.style.left=(SEAT(s).x-10)+"px";pr.style.top=(SEAT(s).y-8)+"px";stage.appendChild(pr);
+          gsap.fromTo(pr,{opacity:.65,scale:1},{opacity:0,scale:2.1,duration:1.6,ease:"power2.out",repeat:-1});
+          s._pr=pr;}
+      } /* lote paralelo do mesmo papel: o personagem fica onde esta, o card ativa igual */
       nodeEl[s.id].classList.add("active");
       if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent="ativo";}
       EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
-      if(liveMode){
-        const pr=document.createElement("div");pr.className="pulse";
-        pr.style.left=(SEAT(s).x-10)+"px";pr.style.top=(SEAT(s).y-8)+"px";stage.appendChild(pr);
-        gsap.fromTo(pr,{opacity:.65,scale:1},{opacity:0,scale:2.1,duration:1.6,ease:"power2.out",repeat:-1});
-        s._pr=pr;}
       cur.step=s;cur.gate=null;
       leader("monitorando "+role+" · "+s.id,true);
       log(role.replace("-intern",""),"iniciou "+s.id+" — "+s.title);
@@ -605,8 +706,11 @@ function applyEvent(e){
   if((e.ev==="PreToolUse")&&(e.aid||e.agent)){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     const who=role==="leader"?"leader":role.replace("-intern","");
-    if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
-    else log(who,(e.tool||"")+" "+shortPath(e.info));
+    if(e.tool==="Task"||e.tool==="Agent"){log("leader","despachou: "+(e.info||e.sub||""));return;}
+    const line=(e.tool||"")+" "+shortPath(e.info);
+    log(who,line);
+    think(role,line);
+    if(role==="ux-intern"&&/playwright|axe|e2e|\.spec\./i.test(e.info||""))uxShow(shortPath(e.info));
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) */
     if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
@@ -614,10 +718,11 @@ function applyEvent(e){
   if(e.ev==="SubagentStop"){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     chain(role,async()=>{
-      const s=roleState[role];
-      if(!s){const t=toks[role];if(t)t.el.classList.remove("busy");
+      const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
+      if(e.aid)delete aidStep[e.aid];
+      if(!s||s.status!=="running"){const t=toks[role];if(t)t.el.classList.remove("busy");
         log(role.replace("-intern",""),"encerrou (fora do plan-graph)","rep");return;}
-      s.status="done";roleState[role]=null;
+      s.status="done";
       if(s._pr){s._pr.remove();s._pr=null;}
       const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
@@ -625,16 +730,28 @@ function applyEvent(e){
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
       log(role.replace("-intern",""),"encerrou "+s.id+" — relatorio no terminal","rep");
-      const t=toks[role];if(t){t.el.classList.remove("busy");setPose(t,"stand");}
-      const nx=nextOwn(role,s);
-      if(rowEl[role])rowEl[role].classList.remove("act");
-      if(!nx){
-        if(rowEl[role])rowEl[role].querySelector(".rs").textContent="na tv";
-        if(t)await sitCouch(t);
-      }else{
-        if(rowEl[role])rowEl[role].querySelector(".rs").textContent="aguardando";
-        if(t){await walk(t,WAIT(nx).x,WAIT(nx).y);bob(t);}
+      const t=toks[role];
+      if(charStep[role]===s){ /* o personagem estava NESTE passo: decide pra onde vai */
+        charStep[role]=null;
+        if(t){t.el.classList.remove("busy");setPose(t,"stand");}
+        const other=steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
+        if(other&&t){ /* irmao paralelo ainda rodando: senta la */
+          await walk(t,SEAT(other).x,SEAT(other).y);
+          stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
+          charStep[role]=other;
+        }else{
+          const nx=nextPending(role);
+          if(!nx){
+            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent="na tv";}
+            if(t)await sitCouch(t);
+          }else{
+            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent="aguardando";}
+            if(t){await walk(t,WAIT(nx).x,WAIT(nx).y);bob(t);}
+          }
+        }
       }
+      if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
+        rowEl[role].classList.remove("act");
       if(cur.step===s){cur.step=null;leader("consolidando · proximo passo",false);}
     });return;}
   if(e.ev==="gate"){
