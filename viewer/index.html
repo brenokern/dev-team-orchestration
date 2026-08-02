@@ -171,18 +171,6 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .think::before{content:"";position:absolute;left:50%;bottom:-16px;width:4px;height:4px;
   transform:translateX(-130%);border-radius:50%;
   background:var(--shell);border:1px solid var(--hair-soft)}
-/* janela de teste do ux-intern */
-.uxwin{position:absolute;z-index:8;width:236px;pointer-events:none;opacity:0;
-  background:var(--core-2);border:1px solid var(--hair);border-radius:14px;overflow:hidden}
-.uxwin .wh{display:flex;gap:4px;padding:7px 10px;border-bottom:1px solid var(--hair-soft);align-items:center}
-.uxwin .wd{width:6px;height:6px;border-radius:50%;background:var(--hair)}
-.uxwin .wt{font-family:"Geist Mono",monospace;font-size:8px;color:var(--faint);margin-left:5px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-.uxwin .wb{position:relative;height:118px;padding:11px}
-.uxwin .sk{background:var(--hair-soft);border-radius:5px}
-.uxwin .cur{position:absolute;z-index:2;width:11px;height:11px;color:var(--txt)}
-.uxwin .ring{position:absolute;z-index:1;width:18px;height:18px;border-radius:50%;
-  border:1.5px solid var(--live);opacity:0}
 .gatewrap{position:absolute;left:0;right:0;top:16px;z-index:22;display:flex;
   justify-content:center;pointer-events:none}
 .gate{display:flex;align-items:center;gap:12px;background:var(--core-2);
@@ -641,48 +629,6 @@ function think(role,text){
   },3500);
 }
 
-/* janela de teste do ux-intern: navegador em miniatura com cursor "testando" */
-let uxwin=null,uxTl=null,uxHide=null;
-function uxShow(text){
-  const t=toks["ux-intern"];if(!t||!liveMode)return;
-  if(!uxwin){
-    uxwin=document.createElement("div");uxwin.className="uxwin";
-    uxwin.innerHTML=`<div class="wh"><span class="wd"></span><span class="wd"></span><span class="wd"></span>
-      <span class="wt" id="uxwt"></span></div>
-      <div class="wb">
-        <div class="sk" style="width:60%;height:10px;margin-bottom:9px"></div>
-        <div class="sk" style="width:92%;height:7px;margin-bottom:6px"></div>
-        <div class="sk" style="width:84%;height:7px;margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px">
-          <div class="sk" style="flex:1;height:38px"></div>
-          <div class="sk" style="flex:1;height:38px"></div>
-          <div class="sk" style="flex:1;height:38px"></div>
-        </div>
-        <div class="sk" style="width:34%;height:13px;margin-top:12px;background:var(--live-soft)"></div>
-        <div class="ring" id="uxring"></div>
-        <svg class="cur" id="uxcur" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-          <path d="M1 1 L1 10 L3.5 7.8 L5 11 L6.8 10.2 L5.3 7 L9 7 Z"/></svg>
-      </div>`;
-    stage.appendChild(uxwin);
-  }
-  uxwin.querySelector("#uxwt").textContent=text.slice(0,60);
-  const x=parseFloat(t.el.style.left),y=parseFloat(t.el.style.top);
-  uxwin.style.left=(x-70)+"px";uxwin.style.top=(y-190)+"px";
-  gsap.to(uxwin,{opacity:1,duration:.5,ease:"power3.out"});
-  if(!uxTl){ /* cursor passeia e clica em alvos aleatorios do esqueleto */
-    const cur=uxwin.querySelector("#uxcur"),ring=uxwin.querySelector("#uxring");
-    gsap.set(cur,{x:20,y:30});
-    uxTl=gsap.timeline({repeat:-1,repeatRefresh:true});
-    uxTl.to(cur,{x:()=>14+Math.random()*190,y:()=>18+Math.random()*88,
-        duration:1.1,ease:"power2.inOut"})
-      .add(()=>{const cx=gsap.getProperty(cur,"x"),cy=gsap.getProperty(cur,"y");
-        gsap.fromTo(ring,{x:cx-4,y:cy-4,opacity:.8,scale:.4},
-          {opacity:0,scale:1.6,duration:.6,ease:"power2.out"});})
-      .to({},{duration:.5});
-  }
-  clearTimeout(uxHide);
-  uxHide=setTimeout(()=>gsap.to(uxwin,{opacity:0,duration:.6}),8000);
-}
 
 function applyEvent(e){
   if(e.agent)e.agent=norm(e.agent);
@@ -727,7 +673,6 @@ function applyEvent(e){
     const line=(e.tool||"")+" "+shortPath(e.info);
     log(who,line);
     think(role,line);
-    if(role==="ux-intern"&&/playwright|axe|e2e|\.spec\./i.test(e.info||""))uxShow(shortPath(e.info));
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) */
     if(e.tool==="Task"||e.tool==="Agent")log("leader","despachou: "+(e.info||e.sub||""));
