@@ -25,6 +25,11 @@ não editar). Fontes de premissa (consulte quando precisar de fundamento, não r
   agentes que o plano indicar) — definição do `Agent`, tools (`@tool`/funções), montagem do
   loop, prompts/instructions, config do provider (Bedrock), e a integração que expõe o agente
   pro resto do backend.
+- **Exceção cirúrgica nos controllers**: quando o plano expõe rotas como tools do agente, é
+  SEU o passo de decorar os controllers com **`@AgentTool`** (+ imports/metadata do decorator).
+  Você edita o controller SÓ para isso, em cima do contrato de rotas que o backend-intern
+  entregou — nunca muda a lógica, a assinatura ou os DTOs da rota. Divergência no contrato →
+  reporte ao Leader, não conserte.
 Não toque em `infrastructure/**`, `prisma/**`, nem no frontend.
 
 ## O que fazer (premissas Strands + Claude)
@@ -44,7 +49,12 @@ Não toque em `infrastructure/**`, `prisma/**`, nem no frontend.
    token/rate-limit a cada rodada.
 7. **Multi-tenancy:** se o agente lê/escreve dados do app, faça-o **através dos serviços do
    backend** (que já aplicam tenancy/RLS) — nunca acesse o banco direto burlando o tenant.
-8. Commit local: `feat(backend): agente <nome> (strands)` ou escopo `ai` se o time adotar.
+8. **Decoração `@AgentTool`** (quando o plano pede): passo em CONJUNTO com o backend-intern —
+   ele expõe a rota e entrega o contrato (path, DTOs, permissões) no relatório; você aplica o
+   `@AgentTool` no controller seguindo o precedente do repo (procure usos existentes do
+   decorator antes de inventar formato), registra a tool no agente e testa a chamada ponta a
+   ponta. Commit separado: `feat(ai): expoe <rotas> como tools do agente`.
+9. Commit local: `feat(backend): agente <nome> (strands)` ou escopo `ai` se o time adotar.
 
 ## O que NÃO fazer
 - Provisionar Bedrock/infra (é do infra-intern) — se faltar recurso, reporte ao Leader.

@@ -79,6 +79,13 @@ agente de IA, e roda **depois do backend** (as tools do agente consomem os servi
 e **antes do frontend** (que pode chamar o endpoint do agente). Dentro de uma camada, o trabalho
 é quebrado em **passos pequenos**.
 
+**Passo `@AgentTool` (quando o plano expõe rotas como tools de agente):** é um passo da camada
+**ai**, feito EM CONJUNTO — o `backend-intern` entrega a rota pronta + contrato (path, DTOs,
+permissões) no relatório dele, e o `ai-intern` aplica o decorator `@AgentTool` nos controllers
+(única escrita dele fora da lane, cirúrgica: decorator + imports, nunca a lógica da rota). O
+backend-intern NÃO decora; o ai-intern NÃO altera a rota. O Leader anexa o contrato do backend
+no dispatch desse passo.
+
 **Princípios de execução (velocidade + dinamismo) — leia antes:**
 - **Passos ATÔMICOS.** Quebre a camada nos passos do plano (10.1, 10.2, 10.3…) e despache **um
   passo por dispatch**. NUNCA empacote 10.1–10.5 num dispatch só — subagents curtos terminam
@@ -133,7 +140,16 @@ pronto, o ux-intern reporta o setup necessário em vez de falhar silenciosamente
 Despache `reviewer-intern` no diff **inteiro** da branch (integração entre camadas, não só cada
 parte isolada).
 
-### N+4. TLDR do PR
+### N+4. Limpeza dos artefatos de teste
+Com a revisão final aprovada, despache o `reviewer-intern` mais uma vez (única exceção de
+escrita dele, no espírito `ponytail`: zero lixo na branch) para **deletar os artefatos de teste
+da run**: specs e2e do ux-intern (`apps/frontend/e2e/**`), storageState, screenshots/trace/
+report. Specs de service/controller do backend são ENTREGÁVEL e ficam. `playwright.config.ts` e
+a devDependency do Playwright não são removidos pela automação — o reviewer lista e o dev
+decide. Commit: `chore(frontend): remove artefatos de teste e2e da run`. No modo visual,
+inclua este passo no plan-graph (owner `reviewer-intern`, layer `limpeza`).
+
+### N+5. TLDR do PR
 Despache `pr-writer-intern` (opus): lê os commits locais da branch e escreve o TLDR de descrição
 do PR. Entregue esse texto ao usuário — ele abre o PR (o time nunca dá push nem abre PR).
 

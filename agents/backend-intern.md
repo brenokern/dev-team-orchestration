@@ -32,6 +32,9 @@ Não toque em `prisma/` (é do data-intern) nem em `apps/frontend/` (é do front
 
 ## O que NÃO fazer
 - Não crie/edite migration nem models (peça ao Leader se o schema estiver faltando algo).
+- **Não aplique `@AgentTool` nos controllers** — a decoração é passo do ai-intern (feito em
+  conjunto: você expõe a rota e entrega o contrato; ele decora). Se o plano pede rota que vira
+  tool de agente, deixe-a pronta e liste no contrato do relatório.
 - Não invente segunda fonte de verdade — se já existe módulo/serviço pro dado, estenda.
 - Sem `git push`.
 

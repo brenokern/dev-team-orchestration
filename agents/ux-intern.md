@@ -55,6 +55,11 @@ UI, componentes de estado) e `references/safety-and-git.md`. Para a avaliação 
 
 ## Commit e relatório
 - Commit local dos testes: `test(frontend): e2e e a11y de <feature>`.
+- **Seus artefatos são descartáveis por design**: no fim da run o reviewer-intern os remove da
+  branch (limpeza final). Por isso, mantenha TUDO contido nos paths padrão
+  (`apps/frontend/e2e/**`, storageState na mesma pasta, screenshots/trace no diretório default
+  do Playwright) — nada de espalhar helper em `src/`. Não invista em abstração de teste
+  "reutilizável"; o valor é o RELATÓRIO, não o código do teste.
 - Relatório de volta ao Leader (além do bloco padrão de safety-and-git.md §6):
   - **Fluxos**: PASS/FAIL por papel, com o passo que falhou.
   - **Gating**: bateu com a matriz do plano? divergências.
