@@ -789,6 +789,44 @@ const shortPath=str=>String(str||"").split(" ").map(tok=>{
 const chains={}; /* fila por papel: ordem interna garantida, papeis em paralelo */
 const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(()=>{});};
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
+
+/* fecha um passo cujo SubagentStop se perdeu/atrasou (usado pelo sweep do
+   Stop do Leader e pelo reconciliador de inversao de ordem) */
+function closeOrphan(s){
+  if(s.status!=="running")return;
+  s.status="done";
+  if(s._sus){clearTimeout(s._sus);s._sus=null;}
+  if(s._pr){s._pr.remove();s._pr=null;}
+  const n=nodeEl[s.id];
+  if(n){n.classList.remove("active");n.classList.add("done");
+    gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
+  EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
+    if(b===s.id&&p2){p2.classList.remove("lit");p2.classList.add("past");}});
+  $("#cnt").textContent=(++doneN)+" / "+steps.length;
+  lastDone=s;
+  log("leader",s.id+" — "+t("interrupted"));
+  const role=s.owner,tk=toks[role];
+  if(charStep[role]===s){charStep[role]=null;
+    if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
+}
+function armSuspect(sOld,role){
+  clearTimeout(sOld._sus);
+  sOld._sus=setTimeout(()=>{
+    if(sOld.status!=="running")return;
+    if(sOld._lastEv&&Date.now()-sOld._lastEv<15000){armSuspect(sOld,role);return;} /* ainda vivo */
+    chain(role,async()=>{
+      if(sOld.status!=="running")return;
+      closeOrphan(sOld);
+      /* personagem migra pro passo que realmente esta rodando */
+      const cur2=steps.find(q=>!q.human&&q.owner===role&&q.status==="running");
+      const tk=toks[role];
+      if(cur2&&tk&&!charStep[role]){
+        await walk(tk,SEAT(cur2).x,SEAT(cur2).y);
+        stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
+        charStep[role]=cur2;}
+    });
+  },20000);
+}
 function addDynStep(role){
   if(!plan||!steps.length)return null;
   /* pai: o passo RODANDO do proprio papel (extra nasce dele — ex.: drift de
@@ -901,7 +939,13 @@ function applyEvent(e){
           pr.style.left=(SEAT(s).x-10)+"px";pr.style.top=(SEAT(s).y-8)+"px";stage.appendChild(pr);
           gsap.fromTo(pr,{opacity:.65,scale:1},{opacity:0,scale:2.1,duration:1.6,ease:"power2.out",repeat:-1});
           s._pr=pr;}
-      } /* lote paralelo do mesmo papel: o personagem fica onde esta, o card ativa igual */
+      }else{
+        /* mesmo papel com passo ainda "running": pode ser lote paralelo REAL
+           ou o stop anterior que chegou atrasado no log (hooks sao processos
+           separados; a ordem de append nao e garantida). Reconciliador: se o
+           passo antigo ficar 20s sem stop E sem eventos, fecha como orfao. */
+        armSuspect(charStep[role],role);
+      }
       nodeEl[s.id].classList.add("active");
       if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent=t("active");}
       EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
@@ -918,7 +962,7 @@ function applyEvent(e){
     const line=(e.tool||"")+" "+shortPath(e.info);
     log(who,line);
     think(role,line);
-    const st=aidStep[e.aid];if(st)st._tools=(st._tools||0)+1;
+    const st=aidStep[e.aid];if(st){st._tools=(st._tools||0)+1;st._lastEv=e.t||Date.now();}
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) — rota REAL dos dispatches do Leader */
     if(e.tool==="Task"||e.tool==="Agent"){
@@ -930,6 +974,7 @@ function applyEvent(e){
     chain(role,async()=>{
       const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
       if(e.aid)delete aidStep[e.aid];
+      if(s&&s._sus){clearTimeout(s._sus);s._sus=null;} /* stop chegou: desarma o reconciliador */
       if(!s||s.status!=="running"){const t=toks[role];if(t)t.el.classList.remove("busy");
         log(role.replace("-intern",""),t("offPlanEnd"),"rep");return;}
       s.status="done";
@@ -1022,22 +1067,7 @@ function applyEvent(e){
       /* invariante: dispatch e sincrono — se o Leader falou, nenhum subagente
          esta vivo. Passo ainda "running" = stop perdido (interrompido no
          terminal). Fecha os orfaos pra nao prender o personagem na cadeira. */
-      steps.forEach(s=>{
-        if(s.status!=="running"||s.human)return;
-        s.status="done";
-        if(s._pr){s._pr.remove();s._pr=null;}
-        const n=nodeEl[s.id];
-        if(n){n.classList.remove("active");n.classList.add("done");
-          gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
-        EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
-          if(b===s.id&&p2){p2.classList.remove("lit");p2.classList.add("past");}});
-        $("#cnt").textContent=(++doneN)+" / "+steps.length;
-        lastDone=s;
-        log("leader",s.id+" — "+t("interrupted"));
-        const role=s.owner,tk=toks[role];
-        if(charStep[role]===s){charStep[role]=null;
-          if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
-      });
+      steps.forEach(s=>{if(s.status==="running"&&!s.human)closeOrphan(s);});
       const pending=steps.some(s=>s.status==="pending"||s.status==="running");
       const waiting=steps.some(s=>s.status==="waiting");
       if(waiting){leader(t("pausedGate"),true);return;}
