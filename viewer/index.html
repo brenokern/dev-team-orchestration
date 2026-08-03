@@ -508,7 +508,7 @@ function stepZoom(){
   return Math.min(1.45,Math.max(.55,(wrap.clientHeight-70)/span));
 }
 const LOUNGE={tv:{x:64,y:0},couch:{x:168,y:0},seat:i=>({x:196+i*26,y:0}),table:{x:230,y:0},plant:[{x:26,y:0},{x:452,y:0}]};
-function loungeY(){const base=MIDY-35; /* centro visual da lounge (tv topo->mesinha base = base+35) = centro do card */
+function loungeY(){const base=MIDY-29; /* o TAPETE (caixa do ambiente: base-30..base+88) centrado no card */
   LOUNGE.tv.y=base-16;LOUNGE.couch.y=base+14;LOUNGE.table.y=base+56;
   LOUNGE.plant[0].y=base-52;LOUNGE.plant[1].y=base-36;LOUNGE._seatY=base-2;}
 
