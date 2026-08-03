@@ -787,7 +787,10 @@ const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).cat
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
 function addDynStep(role){
   if(!plan||!steps.length)return null;
-  const parent=lastDone||steps[steps.length-1];
+  /* pai: o passo RODANDO do proprio papel (extra nasce dele — ex.: drift de
+     migration no meio do T1) > ultimo concluido (fix pos-review) > ultimo passo */
+  const running=steps.find(q=>!q.human&&!q._dyn&&q.owner===role&&q.status==="running");
+  const parent=running||lastDone||steps[steps.length-1];
   dynN++;
   const id="x"+dynN;
   const raw=lastDispatch[role]||"";
@@ -913,8 +916,10 @@ function applyEvent(e){
     think(role,line);
     const st=aidStep[e.aid];if(st)st._tools=(st._tools||0)+1;
     return;}
-  if(e.ev==="PreToolUse"){ /* leader (sem aid) */
-    if(e.tool==="Task"||e.tool==="Agent")log("leader",t("dispatched")+(e.info||e.sub||""));
+  if(e.ev==="PreToolUse"){ /* leader (sem aid) — rota REAL dos dispatches do Leader */
+    if(e.tool==="Task"||e.tool==="Agent"){
+      if(e.sub)lastDispatch[e.sub]=String(e.info||"").replace(/^[a-z-]+\s*:\s*/i,"");
+      log("leader",t("dispatched")+(e.info||e.sub||""));}
     return;}
   if(e.ev==="SubagentStop"){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
