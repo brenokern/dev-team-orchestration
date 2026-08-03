@@ -71,6 +71,23 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
 - Leia `CLAUDE.md`, `CLAUDE_GUIDELINES.md`, `GIT.md` do repo para ancorar o time.
 - A partir do plano, decida QUAIS camadas entram (nem todo plano tem infra ou frontend).
 
+### 0.5 Escalação do time + confirmação humana (UMA rodada, eficiente)
+Antes de despachar qualquer passo, apresente a escalação que você montou, num bloco único e
+compacto — um passo por linha (`s3 · backend · backend-intern — service + controller`), os
+gates humanos previstos (migration/infra/PR), os estágios opcionais com o default marcado
+(revisão por camada [on] · QA [enxuto] · UX [enxuto|completo|off] · limpeza [on]) e o que as
+observações da run já alteraram. Faça **UMA pergunta**: "Aprovo essa escalação ou ajusta algo?"
+e ESPERE.
+- Ajustes ("tira s7", "UX completo", "sem revisão por camada") são aplicados SEM nova rodada —
+  reapresente só as linhas alteradas e siga.
+- Volte a perguntar apenas se o ajuste quebrar dependência ou contradisser o plano (ex.:
+  remover passo do qual outro depende) — aponte o problema e ofereça a alternativa.
+- O usuário pula este gate dizendo "vai direto"/"sem confirmação" nas observações da run.
+No modo visual: publique o plan-graph ANTES da pergunta (aprova-se vendo o fluxo desenhado no
+viewer) e modele a aprovação como o PRIMEIRO passo humano do grafo — `h0 · humano ·
+"aprovar a escalação do time"`, dependência de todos os passos-raiz — sinalizado com
+`emit.mjs gate h0 waiting/approved` como qualquer gate.
+
 ### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → ai → frontend`:
 
 **As CAMADAS são sempre sequenciais** (frontend depende de backend depende de schema). A camada

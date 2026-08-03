@@ -48,9 +48,10 @@ Com o gate aprovado, adicione ao fluxo normal da skill estas obrigações do mod
      ```
    - `steps` = os passos atômicos do plano, um por dispatch previsto, com `deps` refletindo a
      ordem real (camadas sequenciais; passos paralelos da mesma camada compartilham as deps).
-   - **Inclua um passo `human: true`** para cada intervenção humana já prevista: aplicar a
-     migration (depois da camada de dados), aplicar plan de infra (se houver) e abrir o PR
-     (último passo, depois do pr-writer).
+   - **Inclua um passo `human: true`** para cada intervenção humana já prevista: a aprovação
+     da escalação (`h0`, PRIMEIRO passo do grafo, dependência de todos os passos-raiz — ver
+     seção 0.5 do SKILL.md), aplicar a migration (depois da camada de dados), aplicar plan de
+     infra (se houver) e abrir o PR (último passo, depois do pr-writer).
    - Publique: `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" plan /tmp/team-view-plan.json`
 
 3. **Despache com subagent nomeado**: use `subagent_type: "<papel>"` (ex.: `backend-intern`) em
