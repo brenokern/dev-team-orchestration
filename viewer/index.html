@@ -115,10 +115,11 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .node.humc.done .n-shell{border-style:solid;border-color:var(--live-dim);background:var(--live-soft);animation:none}
 .n-lay{font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.2em;
   text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
-.n-subs{display:none;font-size:8px;letter-spacing:.08em;color:var(--hold);
-  border:1px solid var(--hold-dim);border-radius:999px;padding:1px 7px;margin-left:6px;
-  vertical-align:1px}
+.n-subs{display:none;font-family:"Geist Mono",monospace;font-size:9px;letter-spacing:.06em;
+  color:var(--hold);background:var(--hold-soft);border:1px solid var(--hold-dim);
+  border-radius:999px;padding:3px 9px;margin-right:auto;cursor:pointer}
 .n-subs.on{display:inline-block}
+.n-subs.run{animation:gpulse 1.2s ease-in-out infinite;border-color:var(--hold)}
 .node.active .n-lay{color:var(--live)}
 .n-t{font-size:12.5px;line-height:1.35;margin-top:6px;letter-spacing:-.012em;color:var(--dim);
   flex:1;transition:color .6s var(--ease)} /* NUNCA corta: o card cresce (altura uniforme = a do maior) */
@@ -707,8 +708,8 @@ function buildGraph(){
     n.style.left=s.x+"px";n.style.top=s.y+"px";
     const hasIn=EDGES.some(([,b])=>b===s.id),hasOut=EDGES.some(([a])=>a===s.id);
     n.innerHTML=`<div class="n-shell"><div class="n-core">
-      <div class="n-lay">${s.layer||""} <span class="n-subs"></span></div><div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
-      <div class="n-f"><span class="n-tm">0s</span></div>
+      <div class="n-lay">${s.layer||""}</div><div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
+      <div class="n-f"><span class="n-subs"></span><span class="n-tm">0s</span></div>
       <div class="n-check">&#10003;</div></div></div>
       ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
     stage.appendChild(n);nodeEl[s.id]=n;});
@@ -912,8 +913,10 @@ function renderSubs(parent){
   const el=n.querySelector(".n-subs");if(!el)return;
   const subs=parent._subs||[];if(!subs.length)return;
   const done=subs.filter(q=>q.status==="done").length;
-  el.classList.add("on");
-  el.textContent=done+"/"+subs.length+" "+(LANG==="pt"?"extra":"extra")+(subs.length>1?"s":"");
+  const running=subs.some(q=>q.status==="running");
+  el.classList.add("on");el.classList.toggle("run",running);
+  el.textContent=(running?"⚡ ":"")+done+"/"+subs.length+" extra"+(subs.length>1?"s":"");
+  el.title=subs.map(q=>(q.status==="done"?"✓ ":"● ")+q.title).join("\n");
   n.classList.add("hasnotes"); /* card vira clicavel: dialog mostra os subprocessos */
 }
 
