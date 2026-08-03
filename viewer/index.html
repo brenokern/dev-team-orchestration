@@ -798,6 +798,26 @@ const chains={}; /* fila por papel: ordem interna garantida, papeis em paralelo 
 const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(()=>{});};
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
 
+/* passo concluido: arestas de SAIDA ficam verdes, com uma fagulha viajando
+   do card concluido ate o(s) proximo(s) — o progresso fisicamente andando */
+function sparkFrom(sId,animate){
+  EDGES.forEach(([a,b])=>{
+    if(a!==sId)return;
+    const p=pathEl[a+">"+b];if(!p)return;
+    p.classList.add("past");
+    if(!animate||!liveMode||document.hidden)return;
+    const L=p.getTotalLength();
+    const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    dot.setAttribute("r","4.5");dot.style.fill="var(--live)";
+    edgesSvg.appendChild(dot);
+    const o={t:0};
+    gsap.to(o,{t:1,duration:Math.min(1.5,Math.max(.6,L/650)),ease:"power1.inOut",
+      onUpdate(){const pt=p.getPointAtLength(o.t*L);
+        dot.setAttribute("cx",pt.x);dot.setAttribute("cy",pt.y);},
+      onComplete(){gsap.to(dot,{opacity:0,duration:.25,onComplete:()=>dot.remove()});}});
+  });
+}
+
 /* zera o palco por completo (re-plan): DOM, mapas e contadores */
 function hardReset(){
   document.querySelectorAll(".node,.furn,.tok,.pulse,.think").forEach(el=>el.remove());
@@ -828,6 +848,7 @@ function closeOrphan(s){
     if(b===s.id&&p2){p2.classList.remove("lit");p2.classList.add("past");}});
   $("#cnt").textContent=(++doneN)+" / "+steps.length;
   lastDone=s;
+  sparkFrom(s.id,false); /* orfao: verde sem fagulha (nao houve conclusao limpa) */
   log("leader",s.id+" — "+t("interrupted"));
   const role=s.owner,tk=toks[role];
   if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
@@ -1036,6 +1057,7 @@ function route(e){
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
       lastDone=s;
+      sparkFrom(s.id,true);
       log(role.replace("-intern",""),t("finished")(s.id),"rep");
       const t=toks[role];
       if(charStep[role]&&charStep[role].id===s.id){ /* o personagem estava NESTE passo */
@@ -1083,6 +1105,7 @@ function route(e){
       const s=stepsById[e.id];if(!s||s.status!=="pending")return;
       s.status="skipped";
       const n=nodeEl[s.id];if(n)n.classList.add("skipped");
+      sparkFrom(s.id,false); /* pulado: caminho segue adiante, sem fagulha */
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
       log("leader",e.id+" — "+(e.msg||t("skipped")));
     });return;}
@@ -1109,6 +1132,7 @@ function route(e){
           if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
         $("#cnt").textContent=(++doneN)+" / "+steps.length;
         lastDone=s;
+        sparkFrom(s.id,true);
         cur.gate=null;flashTitle(false);
         gsap.to($("#gate"),{opacity:0,y:-14,duration:.45,ease:"power3.in"});
         log(t("you"),t("approved"),"hum");
