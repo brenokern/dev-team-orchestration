@@ -100,7 +100,9 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   transition:stroke .6s var(--ease)}
 .edges path.lit{stroke:var(--live-dim)}
 .edges path.past{stroke:var(--live-dim)} /* trajeto concluido fica verde */
-.node{position:absolute;width:176px;transform:translate(-50%,-50%);opacity:0}
+/* centralizacao via GSAP (x/y em px pos-medicao) — translate % aqui seria
+   congelado em px pelo gsap ANTES da altura uniforme, desalinhando portas */
+.node{position:absolute;width:176px;opacity:0}
 .n-shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:20px;padding:5px;
   transition:border-color .6s var(--ease),background .6s var(--ease)}
 .n-core{background:var(--core-2);border-radius:15px;padding:11px 12px;position:relative;overflow:hidden;
@@ -683,14 +685,29 @@ function buildGraph(){
       <div class="n-f"><span class="n-tm">0s</span></div>
       <div class="n-check">&#10003;</div></div></div>
       ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
-    stage.appendChild(n);nodeEl[s.id]=n;
-    gsap.set(n,{opacity:0,scale:.86,filter:"blur(8px)"});});
-  /* altura uniforme = a do card que mais precisa (titulo nunca corta) */
+    stage.appendChild(n);nodeEl[s.id]=n;});
+  /* altura uniforme = a do card que mais precisa (titulo nunca corta);
+     SO DEPOIS o offset de centralizacao, em px exatos */
   let core=100;
   steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
     c.style.height="auto";core=Math.max(core,c.offsetHeight);});
   steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=core+"px";});
   CARD_H=core+34;
+  steps.forEach(s=>gsap.set(nodeEl[s.id],
+    {x:-88,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"}));
+  /* fonte web carrega depois: re-mede e re-centraliza (altura pode mudar) */
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{
+    let c2=100;
+    steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
+      c.style.height="auto";c2=Math.max(c2,c.offsetHeight);});
+    steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=c2+"px";});
+    if(Math.abs(c2+34-CARD_H)>2){
+      CARD_H=c2+34;
+      steps.forEach(s=>{
+        gsap.set(nodeEl[s.id],{y:-CARD_H/2});
+        const d=deskEl[s.id];
+        if(d){d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";}});
+    }});
   DYNY=FLOWY.max+CARD_H+118; /* faixa do subfluxo, abaixo do fluxo planejado */
   SH=Math.max(720,DYNY+CARD_H/2+185);
   loungeY();
@@ -781,6 +798,7 @@ function addDynStep(role){
     <div class="n-f"><span class="n-tm">0s</span></div>
     <div class="n-check">&#10003;</div></div></div><span class="p-in"></span>`;
   stage.appendChild(n);nodeEl[id]=n;
+  gsap.set(n,{x:-88,y:-CARD_H/2});
   gsap.fromTo(n,{opacity:0,scale:.86,filter:"blur(8px)"},
     {opacity:1,scale:1,filter:"blur(0px)",duration:.7,ease:"power4.out"});
   /* mesa */
