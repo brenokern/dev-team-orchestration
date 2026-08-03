@@ -25,9 +25,9 @@ do fluxo). Cada dispatch vira um subagent real — o que também faz cada um apa
 personagem no **Pixel Agents** (ver `references/pixel-agents.md`).
 
 <HARD-GATE>
-NÃO comece a implementar sem: (1) estar numa branch `feature/*` (nunca `main`/`develop`/
-`staging`), e (2) um arquivo de plano de implementação existente. Se qualquer um faltar, PARE
-e peça ao usuário. O time é a rede de segurança do dev, não substitui o plano nem a branch.
+NÃO comece a implementar sem: (1) estar numa branch de trabalho — QUALQUER nome serve,
+EXCETO `main`, `develop` e `staging` —, e (2) um arquivo de plano de implementação existente.
+Se qualquer um faltar, PARE e peça ao usuário. O time é a rede de segurança do dev, não substitui o plano nem a branch.
 </HARD-GATE>
 
 ## Entrada
@@ -55,7 +55,9 @@ descrição, então no modo skill-avulsa use a linguagem natural. O plano vem da
 
 ## Rails inegociáveis (valem pra TODO subagent — ver `references/safety-and-git.md`)
 
-- **NUNCA `git push`.** Só commit local, formato conventional-commit com escopo (GIT.md).
+- **Git: SÓ COMMIT LOCAL é autorizado — NUNCA `git push`, NUNCA `git pull`.** Commits locais
+  são parte do fluxo (um por passo, conventional-commit com escopo, GIT.md); sincronizar com o
+  remoto, em qualquer direção, é decisão exclusiva do dev.
 - **NUNCA aplicar migration.** O data-intern para no `.sql` gerado e entrega pra revisão humana.
 - **Fica na lane.** Cada agente só toca os paths do seu papel. Reviewer/QA/UX não editam código
   de feature (o ux-intern só escreve seus próprios testes e2e).
@@ -66,7 +68,8 @@ Crie uma TaskList com uma tarefa por camada/estágio aplicável (isso é a visã
 terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário acompanha.
 
 ### 0. Pré-checagem (gate duro)
-- `git rev-parse --abbrev-ref HEAD` → precisa ser `feature/*`. Se não, PARE.
+- `git rev-parse --abbrev-ref HEAD` → qualquer branch serve, EXCETO `main`, `develop` e
+  `staging`. Se estiver numa dessas três, PARE.
 - Confirme que o arquivo de plano existe e leia-o inteiro.
 - Leia `CLAUDE.md`, `CLAUDE_GUIDELINES.md`, `GIT.md` do repo para ancorar o time.
 - A partir do plano, decida QUAIS camadas entram (nem todo plano tem infra ou frontend).

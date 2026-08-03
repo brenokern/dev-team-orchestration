@@ -16,5 +16,6 @@ aponte a contradição e confirme com o usuário antes de despachar o passo afet
 muda execução, não substitui planejamento. Ajustes de escopo entram como passos no plan-graph
 (modo visual) e na TaskList, atribuídos ao papel certo.
 
-Antes de qualquer coisa, aplique o HARD-GATE: confirme que a sessão está numa branch `feature/*`
-e que o arquivo de plano existe. Se faltar algum, PARE e peça ao usuário.
+Antes de qualquer coisa, aplique o HARD-GATE: confirme que a sessão está numa branch de
+trabalho (qualquer nome, EXCETO `main`, `develop` e `staging`) e que o arquivo de plano existe.
+Se faltar algum, PARE e peça ao usuário.

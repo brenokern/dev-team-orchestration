@@ -54,7 +54,8 @@ Requer o repo acessível (público, ou git autenticado se privado). Você não t
 
 ## Como usar
 
-Numa branch `feature/*`, com um plano de implementação já escrito:
+Numa branch de trabalho (qualquer nome, exceto `main`/`develop`/`staging`), com um plano de
+implementação já escrito:
 
 ```
 /dev-team-orchestration:run caminho/do/plano.md

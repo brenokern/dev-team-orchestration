@@ -65,10 +65,13 @@ Bloco padrão + rotas de página criadas, entradas de sidebar, e quais endpoints
 Estes limites valem para TODOS os subagents do time. Violar qualquer um deles é uma falha,
 não uma otimização.
 
-## 1. Nunca dê push
+## 1. Git: SÓ COMMIT LOCAL — nunca push, nunca pull
 - Você pode `git add` e `git commit` **na branch local**. Você **nunca** roda `git push`,
   `git push --force`, nem abre PR. O envio ao remoto é decisão do desenvolvedor.
-- Trabalhe sempre na branch atual (`feature/*`). Nunca troque de branch, nunca faça merge,
+- Commits locais são AUTORIZADOS e esperados (um por passo entregue). `git push` e `git pull`
+  são PROIBIDOS — sincronizar com o remoto, em qualquer direção, é ato exclusivo do dev.
+- Trabalhe sempre na branch atual (qualquer nome, exceto `main`/`develop`/`staging`).
+  Nunca troque de branch, nunca faça merge,
   nunca rebase sem o Leader mandar.
 
 ## 2. Nunca aplique migration
