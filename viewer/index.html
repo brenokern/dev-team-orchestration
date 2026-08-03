@@ -660,17 +660,23 @@ function buildGraph(){
       const dx=Math.max(26,Math.min(72,(x2-x1)*.45));
       d=`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`;
     }else{
-      /* aresta longa: SAI do fluxo, viaja por fora e reentra.
-         Por cima ou por baixo conforme a posicao dos dois pontos;
-         a faixa de baixo so vale a direita da lounge. */
-      const midFlow=(FLOWY.min+FLOWY.max)/2;
-      const useBottom=((y1+y2)/2>midFlow)&&x1>560;
-      const yl=useBottom?FLOWY.max+CARD_H/2+121:FLOWY.min-(CARD_H/2+71);
-      const r=40;
-      d=`M ${x1} ${y1}`+
-        ` C ${x1+r} ${y1}, ${x1+r} ${yl}, ${x1+r+34} ${yl}`+
-        ` L ${x2-r-34} ${yl}`+
-        ` C ${x2-r} ${yl}, ${x2-r} ${y2}, ${x2} ${y2}`;
+      /* aresta longa: desvio LOCAL — so contorna o que ela realmente cruza,
+         pelo lado mais proximo da linha reta entre as duas portas */
+      const crossed=steps.filter(q=>q._c>P._c&&q._c<Q._c);
+      const mid=(y1+y2)/2,r=40;
+      if(!crossed.length){
+        const dx=Math.max(26,Math.min(90,(x2-x1)*.3));
+        d=`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`;
+      }else{
+        const obsTop=Math.min(...crossed.map(q=>q.y-CARD_H/2-24));
+        const obsBot=Math.max(...crossed.map(q=>q.y+CARD_H/2+78));
+        const laneUp=obsTop-26,laneDn=obsBot+26;
+        const yl=Math.abs(laneUp-mid)<=Math.abs(laneDn-mid)?laneUp:laneDn;
+        d=`M ${x1} ${y1}`+
+          ` C ${x1+r} ${y1}, ${x1+r} ${yl}, ${x1+r+34} ${yl}`+
+          ` L ${x2-r-34} ${yl}`+
+          ` C ${x2-r} ${yl}, ${x2-r} ${y2}, ${x2} ${y2}`;
+      }
     }
     const p=document.createElementNS("http://www.w3.org/2000/svg","path");
     p.setAttribute("d",d);
