@@ -125,6 +125,28 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .n-check{position:absolute;top:10px;right:11px;width:15px;height:15px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
   opacity:0;transform:scale(.5)}
+/* notificacao de veredito do leader no card */
+.n-note{position:absolute;top:5px;right:6px;width:11px;height:11px;border-radius:50%;
+  background:#e24b4a;border:1.5px solid var(--core-2);cursor:pointer;padding:0;z-index:3;
+  pointer-events:auto;animation:notep 1.6s ease-in-out 3}
+@keyframes notep{50%{transform:scale(1.35)}}
+.n-note.read{background:var(--faint);animation:none}
+/* dialog do veredito */
+.dlgwrap{position:absolute;inset:0;z-index:40;display:none;place-items:center;
+  background:rgba(0,0,0,.35);backdrop-filter:blur(3px)}
+.dlgwrap.on{display:grid}
+.dlg{width:min(460px,86%);background:var(--core-2);border:1px solid var(--hair);
+  border-radius:18px;padding:18px 20px}
+.dlg .dt{font-size:13px;font-weight:500;letter-spacing:-.01em;margin-bottom:2px}
+.dlg .ds{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);
+  letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
+.dlg .dm{font-family:"Geist Mono",monospace;font-size:10.5px;line-height:1.7;color:var(--txt);
+  background:var(--live-soft);border:1px solid var(--live-dim);border-radius:11px;
+  padding:10px 12px;margin-bottom:8px;word-break:break-word}
+.dlg .dx{margin-top:8px;float:right;font-family:inherit;font-size:11px;color:var(--txt);
+  background:var(--hair);border:1px solid var(--edge-past);border-radius:999px;
+  padding:7px 16px;cursor:pointer;transition:transform .4s var(--ease)}
+.dlg .dx:active{transform:scale(.96)}
 /* portas de conexao nas bordas do card */
 .p-in,.p-out{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;
   transform:translateY(-50%);z-index:2;background:var(--core-2);
@@ -251,6 +273,11 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
     </div>
     <div class="stagewrap" id="wrap">
       <div class="stage" id="stage"><svg class="edges" id="edges"></svg></div>
+      <div class="dlgwrap" id="dlgwrap"><div class="dlg">
+        <div class="dt" id="dlg-t"></div><div class="ds" id="dlg-s"></div>
+        <div id="dlg-body"></div>
+        <button class="dx" id="dlg-x">ok</button>
+      </div></div>
       <div class="gatewrap"><div class="gate" id="gate">
         <span class="gd"></span>
         <div><div class="gt" id="gate-t">o time precisa de você</div><div class="gs" id="gate-s"></div></div>
@@ -499,7 +526,7 @@ wrap.addEventListener("wheel",e=>{e.preventDefault();if(cam)cam.kill();
   const r=wrap.getBoundingClientRect();
   zoomAt(e.deltaY<0?1.11:1/1.11,e.clientX-r.left,e.clientY-r.top);},{passive:false});
 let pan=null;
-wrap.addEventListener("pointerdown",e=>{if(e.target.closest("button,.chip"))return;
+wrap.addEventListener("pointerdown",e=>{if(e.target.closest("button,.chip,.dlgwrap"))return;
   if(cam)cam.kill();
   pan={x:e.clientX,y:e.clientY,ox,oy};wrap.classList.add("drag");wrap.setPointerCapture(e.pointerId);});
 wrap.addEventListener("pointermove",e=>{if(!pan)return;
@@ -849,11 +876,21 @@ function applyEvent(e){
         rowEl[role].classList.remove("act");
       if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
     });return;}
-  if(e.ev==="note"){ /* veredito do Leader: entrada destacada, ancorada no passo se houver id */
+  if(e.ev==="note"){ /* veredito do Leader: stream destacado + notificacao no card */
     chain("main",()=>{
       log("leader",(e.id?e.id+" — ":"")+e.msg,"note");
       const s=e.id&&stepsById[e.id];
-      if(s&&liveMode)focus(s.x,s.y+40,stepZoom());
+      if(s){
+        (s._notes=s._notes||[]).push(e.msg);
+        const n=nodeEl[s.id];
+        if(n&&!n.querySelector(".n-note")){
+          const b=document.createElement("button");
+          b.className="n-note";b.setAttribute("aria-label","veredito do leader");
+          b.onclick=ev=>{ev.stopPropagation();openNotes(s);b.classList.add("read");};
+          n.querySelector(".n-core").appendChild(b);
+        }
+        if(liveMode)focus(s.x,s.y+40,stepZoom());
+      }
     });return;}
   if(e.ev==="gate"){
     chain("main",async()=>{
@@ -896,6 +933,17 @@ function applyEvent(e){
       }else leader(t("leaderPaused"),false);
     });return;}
 }
+
+/* ================= dialog de vereditos ================= */
+function openNotes(s){
+  $("#dlg-t").textContent=s.title;
+  $("#dlg-s").textContent=(LANG==="pt"?"veredito do leader":"leader's verdict")+" · "+s.id;
+  $("#dlg-body").innerHTML=(s._notes||[]).map(m=>`<div class="dm"></div>`).join("");
+  [...$("#dlg-body").children].forEach((el,i)=>el.textContent=s._notes[i]);
+  $("#dlgwrap").classList.add("on");
+}
+$("#dlg-x").onclick=()=>$("#dlgwrap").classList.remove("on");
+$("#dlgwrap").onclick=e=>{if(e.target.id==="dlgwrap")$("#dlgwrap").classList.remove("on");};
 
 /* ================= SSE ================= */
 function connect(){
