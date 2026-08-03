@@ -508,6 +508,7 @@ const charStep={};  /* papel -> passo onde o personagem esta sentado */
 const bubbles={};   /* papel -> balao de pensamento */
 const cur={step:null,gate:null,done:false};
 let liveMode=false;
+const EV_LOG=[]; /* todos os eventos (menos plan): permite reconstruir num re-plan */
 /* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
 let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
 const lastDispatch={}; /* false durante o batch de catch-up */
@@ -639,7 +640,7 @@ setInterval(()=>{ /* timers dos cards ativos: N ações · Ns */
 
 async function patrol(){
   const L=toks.leader;if(!L)return;
-  while(!cur.done){
+  while(!cur.done&&toks.leader===L){
     if(!liveMode){await sleep(600);continue;}
     if(cur.gate){await walk(L,cur.gate.x-64,cur.gate.y+26);await sleep(600);continue;}
     if(cur.step){const s=cur.step;
@@ -790,6 +791,22 @@ const chains={}; /* fila por papel: ordem interna garantida, papeis em paralelo 
 const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(()=>{});};
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
 
+/* zera o palco por completo (re-plan): DOM, mapas e contadores */
+function hardReset(){
+  document.querySelectorAll(".node,.furn,.tok,.pulse,.think").forEach(el=>el.remove());
+  edgesSvg.innerHTML="";$("#roster").innerHTML="";
+  for(const k in nodeEl)delete nodeEl[k];
+  for(const k in deskEl)delete deskEl[k];
+  for(const k in pathEl)delete pathEl[k];
+  for(const k in rowEl)delete rowEl[k];
+  for(const k in aidStep)delete aidStep[k];
+  for(const k in charStep)delete charStep[k];
+  for(const k in bubbles)delete bubbles[k];
+  toks={};seatN=0;doneN=0;dynN=0;lastDynX=-1e9;lastDone=null;
+  cur.step=null;cur.gate=null;cur.done=false;
+  flashTitle(false);gsap.set($("#gate"),{opacity:0});
+}
+
 /* fecha um passo cujo SubagentStop se perdeu/atrasou (usado pelo sweep do
    Stop do Leader e pelo reconciliador de inversao de ordem) */
 function closeOrphan(s){
@@ -806,7 +823,7 @@ function closeOrphan(s){
   lastDone=s;
   log("leader",s.id+" — "+t("interrupted"));
   const role=s.owner,tk=toks[role];
-  if(charStep[role]===s){charStep[role]=null;
+  if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
     if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
 }
 function armSuspect(sOld,role){
@@ -913,7 +930,24 @@ function think(role,text){
 function applyEvent(e){
   if(e.agent)e.agent=norm(e.agent);
   if(e.sub)e.sub=norm(e.sub);
-  if(e.ev==="plan"){plan=e.plan;chain("main",()=>buildGraph());return;}
+  if(e.ev!=="plan")EV_LOG.push(e);
+  route(e);
+}
+function route(e){
+  if(e.ev==="plan"){
+    const replan=!!plan;
+    plan=e.plan;
+    chain("main",()=>{
+      if(replan){ /* Leader republicou (ajustes do gate 0.5): reconstroi TUDO
+                     do zero e reaplica os eventos ja vistos sobre o grafo novo */
+        hardReset();
+        buildGraph();
+        log("leader",LANG==="pt"?"plan-graph atualizado — reconstruindo":"plan-graph updated — rebuilding");
+        const prev=liveMode;liveMode=false;
+        EV_LOG.forEach(ev=>route(ev));
+        chain("main",()=>{liveMode=prev;fit();});
+      }else buildGraph();
+    });return;}
   if(!plan)return; /* eventos antes do plano: so log do leader */
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
@@ -930,6 +964,7 @@ function applyEvent(e){
       aidStep[aid]=s;
       const t=ensureTok(role,s);
       focus(s.x,s.y+40,stepZoom());
+      if(charStep[role]&&charStep[role].status!=="running")charStep[role]=null; /* cadeira stale */
       if(!charStep[role]){ /* personagem livre: senta NESTE passo */
         await walk(t,SEAT(s).x,SEAT(s).y);
         stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
@@ -993,7 +1028,7 @@ function applyEvent(e){
       lastDone=s;
       log(role.replace("-intern",""),t("finished")(s.id),"rep");
       const t=toks[role];
-      if(charStep[role]===s){ /* o personagem estava NESTE passo: decide pra onde vai */
+      if(charStep[role]&&charStep[role].id===s.id){ /* o personagem estava NESTE passo */
         charStep[role]=null;
         if(t){t.el.classList.remove("busy");setPose(t,"stand");}
         const other=steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
