@@ -53,6 +53,8 @@ Com o gate aprovado, adicione ao fluxo normal da skill estas obrigações do mod
      seção 0.5 do SKILL.md), aplicar a migration (depois da camada de dados), aplicar plan de
      infra (se houver) e abrir o PR (último passo, depois do pr-writer).
    - Publique: `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" plan /tmp/team-view-plan.json`
+   - **O plan é publicado UMA vez e é imutável.** Ajustes posteriores: passo removido →
+     `emit.mjs skip <id> "motivo"`; passo adicionado → só despache (vira card extra no viewer).
 
 3. **Despache com subagent nomeado**: use `subagent_type: "<papel>"` (ex.: `backend-intern`) em
    vez de `general-purpose`. O prompt do dispatch fica só com o slice do passo + contratos +

@@ -129,6 +129,10 @@ function cliMode(argv) {
     const msg = rest.join(" ");
     append(session, { t: Date.now(), ev: "gate", id, status, msg });
     if (status === "waiting") toast("team-view: precisa de voce", msg || "Volte ao terminal para aprovar o proximo passo.");
+  } else if (argv[0] === "skip") {
+    /* passo removido na escalacao (o plan NUNCA e re-emitido): emit.mjs skip <stepId> [motivo] */
+    const [, id, ...rest] = argv;
+    if (id) append(session, { t: Date.now(), ev: "skip", id, msg: rest.join(" ").slice(0, 200) });
   } else if (argv[0] === "note") {
     /* veredito/resumo do Leader p/ o viewer: emit.mjs note <stepId|-> "<texto curto>" */
     const [, id, ...rest] = argv;

@@ -86,7 +86,9 @@ e ESPERE.
 No modo visual: publique o plan-graph ANTES da pergunta (aprova-se vendo o fluxo desenhado no
 viewer) e modele a aprovação como o PRIMEIRO passo humano do grafo — `h0 · humano ·
 "aprovar a escalação do time"`, dependência de todos os passos-raiz — sinalizado com
-`emit.mjs gate h0 waiting/approved` como qualquer gate.
+`emit.mjs gate h0 waiting/approved` como qualquer gate. Se a aprovação vier com ajustes,
+**não republique o plan** (é imutável): remoções viram `emit.mjs skip <id>` e adições viram
+dispatches normais, que o viewer desenha como cards extras pendurados na origem.
 
 ### 1..N. Para cada camada aplicável, NA ORDEM `infra → data → backend → ai → frontend`:
 
@@ -205,11 +207,16 @@ visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (na
 1. **Suba o viewer em background** antes do passo 0:
    `node "${CLAUDE_PLUGIN_ROOT}/viewer/cli.mjs" --open &` (Bash com `run_in_background`).
    O viewer é **read-only** — quem inicia, aprova e encerra a run é sempre o terminal.
-2. **Publique o plan-graph** no fim do passo 0: escreva um JSON com
+2. **Publique o plan-graph UMA ÚNICA VEZ** no fim do passo 0: escreva um JSON com
    `{title, roster:[{id,model}], steps:[{id,title,layer,owner,deps[],human?}]}` — um step por
    dispatch previsto, `deps` refletindo a ordem real, e um step `human:true` para CADA
-   intervenção humana prevista (aplicar migration, aplicar infra, abrir o PR). Depois:
-   `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" plan <arquivo.json>`.
+   intervenção humana prevista (aprovação da escalação h0, aplicar migration, aplicar infra,
+   abrir o PR). Depois: `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" plan <arquivo.json>`.
+   **NUNCA re-emita `plan`** — o grafo é imutável depois de publicado. Ajustes vindos do gate
+   0.5 (ou de qualquer momento da run) entram como EVENTOS:
+   - passo removido → `emit.mjs skip <id> "removido na escalação"` (o card apaga no viewer);
+   - passo adicionado → nenhum evento: apenas despache; o viewer o pendura como card extra
+     (subfluxo) no passo de origem.
 3. **Dispatch nomeado** (item 3 acima) — é o que faz cada personagem aparecer certo no viewer.
 4. **Gates humanos**: ao chegar num step `human:true`, rode
    `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" gate <id> waiting "<o que fazer>"` ANTES de

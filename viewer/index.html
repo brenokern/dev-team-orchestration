@@ -162,6 +162,9 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .node.humc .p-in,.node.humc .p-out{border-color:var(--hold-dim)}
 .node.humc.done .p-in,.node.humc.done .p-out{border-color:var(--live)}
 .node.humc .n-shell{border:1px dashed var(--hold-dim)}
+/* passo removido na escalacao */
+.node.skipped{opacity:.4}
+.node.skipped .n-shell{border-style:dashed}
 /* passo extra (subfluxo criado em runtime por correcoes) */
 .node.dync .n-shell{border:1px dashed var(--edge-past)}
 .node.dync .n-lay{color:var(--faint)}
@@ -337,6 +340,7 @@ const STR={
   approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
   natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
   interrupted:"encerrado sem stop (interrompido no terminal)",
+  skipped:"removido na escalação",
   empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
  en:{team:"team",activity:"activity",session:"session",sound:"sound",theme:"theme",
   focus:"focus",focusTip:"center on the running step",fit:"fit",
@@ -360,6 +364,7 @@ const STR={
   approved:"approved — the team moves on",teamEnd:"team finished.",you:"you",
   natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
   interrupted:"closed without stop (interrupted in the terminal)",
+  skipped:"removed from the lineup",
   empty:"no events yet<br>run <b>/dev-team-orchestration:run-visual</b> in the terminal"}
 };
 const t=k=>STR[LANG][k];
@@ -854,7 +859,10 @@ function addDynStep(role){
   const id="x"+dynN;
   const raw=lastDispatch[role]||"";
   const title=raw||((LANG==="pt"?"passo extra de ":"extra step by ")+role.replace("-intern",""));
-  const x=Math.max(lastDynX+COLW,parent.x+Math.round(COLW*.85));lastDynX=x;
+  /* slot mais proximo do PAI que nao colida com outro extra; palco cresce se precisar */
+  let x=parent.x+Math.round(COLW*.85);
+  while(steps.some(q=>q._dyn&&Math.abs(q.x-x)<COLW*.9))x+=COLW;
+  if(x>SW-170){SW=x+300;stage.style.width=SW+"px";edgesSvg.setAttribute("width",SW);}
   const st={id,title:title.slice(0,90),layer:"extra",owner:role,deps:[parent.id],
     status:"pending",_c:99,_dyn:true,x,y:DYNY};
   steps.push(st);stepsById[id]=st;
@@ -1067,6 +1075,14 @@ function route(e){
         }
         if(liveMode)focus(s.x,s.y+40,stepZoom());
       }
+    });return;}
+  if(e.ev==="skip"){ /* passo removido na escalacao (gate 0.5) — plan e imutavel */
+    chain("main",()=>{
+      const s=stepsById[e.id];if(!s||s.status!=="pending")return;
+      s.status="skipped";
+      const n=nodeEl[s.id];if(n)n.classList.add("skipped");
+      $("#cnt").textContent=(++doneN)+" / "+steps.length;
+      log("leader",e.id+" — "+(e.msg||t("skipped")));
     });return;}
   if(e.ev==="gate"){
     chain("main",async()=>{
