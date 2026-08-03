@@ -1192,6 +1192,24 @@ function connect(){
 }
 document.title="team-view";
 applyLang();connect();fit();
+
+/* ===== diagnostico: estado inspecionavel + detector de invariantes =====
+   console: tv.dump() mostra a verdade interna; anomalias logam sozinhas */
+window.tv={
+  get steps(){return steps},get charStep(){return charStep},
+  get aidStep(){return aidStep},get aidRole(){return aidRole},
+  get evlog(){return EV_LOG},
+  dump(){console.table(steps.map(s=>({id:s.id,status:s.status,owner:s.owner,
+    tools:s._tools||0,charHere:Object.entries(charStep).find(([,v])=>v&&v.id===s.id)?.[0]||""})));
+    console.log("charStep:",Object.fromEntries(Object.entries(charStep).map(([k,v])=>[k,v&&v.id])));
+    console.log("aidStep:",Object.fromEntries(Object.entries(aidStep).map(([k,v])=>[k,v&&v.id])));}
+};
+setInterval(()=>{ /* invariante: personagem sentado num passo que nao esta running */
+  for(const[role,s]of Object.entries(charStep)){
+    if(s&&s.status!=="running")
+      console.warn("[tv] INVARIANTE VIOLADA:",role,"sentado em",s.id,
+        "com status",s.status,"— rode tv.dump() e copie a saida");}
+},5000);
 </script>
 </body>
 </html>
