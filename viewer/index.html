@@ -125,6 +125,9 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .n-check{position:absolute;top:10px;right:11px;width:15px;height:15px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
   opacity:0;transform:scale(.5)}
+/* card com veredito: inteiro clicavel */
+.node.hasnotes{cursor:pointer}
+.node.hasnotes:hover .n-shell{border-color:var(--edge-past)}
 /* notificacao de veredito do leader no card */
 .n-note{position:absolute;top:5px;right:6px;width:11px;height:11px;border-radius:50%;
   background:#e24b4a;border:1.5px solid var(--core-2);cursor:pointer;padding:0;z-index:3;
@@ -538,6 +541,16 @@ wrap.addEventListener("pointerdown",e=>{if(e.target.closest("button,.chip,.dlgwr
   pan={x:e.clientX,y:e.clientY,ox,oy};wrap.classList.add("drag");wrap.setPointerCapture(e.pointerId);});
 wrap.addEventListener("pointermove",e=>{if(!pan)return;
   ox=pan.ox+(e.clientX-pan.x);oy=pan.oy+(e.clientY-pan.y);apply();});
+wrap.addEventListener("pointerup",e=>{ /* clique (sem arrasto) num card com veredito abre o dialog */
+  if(!pan||Math.hypot(e.clientX-pan.x,e.clientY-pan.y)>=6)return;
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const nd=el&&el.closest(".node.hasnotes");if(!nd)return;
+  const s=steps.find(q=>nodeEl[q.id]===nd);
+  if(s&&s._notes&&s._notes.length){
+    openNotes(s);
+    const b=nd.querySelector(".n-note");if(b)b.classList.add("read");
+  }
+});
 addEventListener("pointerup",()=>{pan=null;wrap.classList.remove("drag");});
 addEventListener("resize",fit);
 
@@ -932,6 +945,7 @@ function applyEvent(e){
       if(s){
         (s._notes=s._notes||[]).push(e.msg);
         const n=nodeEl[s.id];
+        if(n)n.classList.add("hasnotes");
         if(n&&!n.querySelector(".n-note")){
           const b=document.createElement("button");
           b.className="n-note";b.setAttribute("aria-label","veredito do leader");
