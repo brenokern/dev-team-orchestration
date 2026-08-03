@@ -110,7 +110,9 @@ machineWork(P1, 2); machineWork(P2, 2); machineWork(P1, 1); machineWork(P2, 2);
 machineStop(P1); machineStop(P2);
 
 machine("r2", 3);
+push(1500, { ev: "note", id: "r2", msg: "reviewer: APROVADO com 1 recomendacao — extrair o fallback de gradiente duplicado em cards-grid e cards-editor num helper" });
 machine("q1", 3);   /* q1 recebe aresta LONGA de a1 (pula colunas): rota periferica */
+push(1500, { ev: "note", id: "q1", msg: "QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature" });
 machine("u1", 3);
 machine("r3", 3);
 machine("p1", 2);

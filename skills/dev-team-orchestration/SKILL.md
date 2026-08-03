@@ -216,10 +216,20 @@ visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (na
    parar e perguntar no terminal (acende o card âmbar + notificação nativa do SO). Quando o
    usuário resolver: `... gate <id> approved`.
 
+5. **Vereditos no viewer**: nos MARCOS da run — fim de cada camada (veredito do reviewer),
+   QA, UX, revisão final e encerramento — emita um resumo de 1-2 linhas (≤300 caracteres, o
+   essencial: APROVADO/reprovado + o achado principal):
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" note <stepId|-> "reviewer: 1 achado importante — draft não re-sincroniza pós-upload (cards-editor.tsx); re-dispatch batelado com achados do UX"
+   ```
+   Use o `stepId` do plan-graph quando o veredito é de um passo (a nota ancora e foca o card);
+   `-` para notas gerais. NÃO emita note por passo atômico — só nos marcos (é o narrador da
+   run, não um segundo log de tools).
+
 Os hooks do plugin (`hooks/hooks.json`) capturam `SubagentStart/Stop` e `Pre/PostToolUse`
-sozinhos — o Leader não emite nada por evento de tool. O comando `emit.mjs` NUNCA falha nem
-bloqueia; se o viewer não estiver aberto, a run segue normal e o log fica disponível pra
-`viewer/cli.mjs --replay`.
+sozinhos — fora os marcos acima, o Leader não emite nada por evento. O comando `emit.mjs`
+NUNCA falha nem bloqueia; se o viewer não estiver aberto, a run segue normal e o log fica
+disponível pra `viewer/cli.mjs --replay`.
 
 ## Referências
 - `references/patterns/*.md` — padrões-premissa por camada (fonte primária dos especialistas).

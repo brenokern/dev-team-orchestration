@@ -219,6 +219,9 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .ev.rep .what{color:var(--txt)}
 .ev.hum{background:var(--hold-soft)}
 .ev.hum .what{color:var(--txt)}
+.ev.note{background:var(--live-soft);border:1px solid var(--live-dim)}
+.ev.note .who{color:var(--live)}
+.ev.note .what{color:var(--txt)}
 .empty{flex:1;display:grid;place-items:center;color:var(--faint);
   font-family:"Geist Mono",monospace;font-size:11px;text-align:center;line-height:2}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--hair);border-radius:3px}
@@ -845,6 +848,12 @@ function applyEvent(e){
       if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
         rowEl[role].classList.remove("act");
       if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
+    });return;}
+  if(e.ev==="note"){ /* veredito do Leader: entrada destacada, ancorada no passo se houver id */
+    chain("main",()=>{
+      log("leader",(e.id?e.id+" — ":"")+e.msg,"note");
+      const s=e.id&&stepsById[e.id];
+      if(s&&liveMode)focus(s.x,s.y+40,stepZoom());
     });return;}
   if(e.ev==="gate"){
     chain("main",async()=>{
