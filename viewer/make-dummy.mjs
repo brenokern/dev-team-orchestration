@@ -5,10 +5,14 @@
  *   node viewer/make-dummy.mjs            # (re)escreve viewer/fixtures/dummy.ndjson
  *   node viewer/cli.mjs --replay viewer/fixtures/dummy.ndjson --open
  *
- * Cobre de proposito TODOS os casos que ja quebraram ou que estressam o layout:
- * fan-out/fan-in, aresta longa pulando colunas (rota periferica), lote paralelo
- * do MESMO papel, gates humanos (waiting -> Stop do leader -> approved),
- * papel fora do plano (infra triste na tv) e agent_type namespaced de plugin.
+ * Cobre TODOS os comportamentos atuais:
+ *  - h0 (aprovacao da escalacao) como raiz humana do grafo + fagulha ao aprovar
+ *  - plan IMUTAVEL: ajuste da escalacao via skip (opt1 removido)
+ *  - extra com PAI RODANDO (drift no meio do s1 -> pendura no s1)
+ *  - extra pos-review (fix do frontend pendurado no r2)
+ *  - lote paralelo do MESMO papel (f3/f4), papeis paralelos (a1/f1)
+ *  - aresta longa a1->q1 (desvio local), notas com badge no card,
+ *    tokens nos stops, gates com Stop do leader no meio, infra triste na tv
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -20,8 +24,7 @@ const OUT = path.join(HERE, "fixtures", "dummy.ndjson");
 let t = 1700000000000;
 const ev = [];
 const push = (dt, e) => { t += dt; ev.push({ t, ...e }); };
-/* namespaced de proposito: e assim que os hooks entregam agente de plugin */
-const NS = "dev-team-orchestration:";
+const NS = "dev-team-orchestration:"; /* agent_type namespaced, como nos hooks reais */
 
 const plan = {
   title: "feature dummy — cards personalizados",
@@ -32,10 +35,12 @@ const plan = {
     { id: "reviewer-intern", model: "opus" }, { id: "pr-writer-intern", model: "opus" }
   ],
   steps: [
-    { id: "s1", title: "1. model + migration RLS", layer: "dados", owner: "data-intern", deps: [] },
+    { id: "h0", title: "aprovar a escalação do time", layer: "humano", owner: "voce", deps: [], human: true },
+    { id: "s1", title: "1. model + migration RLS", layer: "dados", owner: "data-intern", deps: ["h0"] },
     { id: "h1", title: "revisar e aplicar a migration", layer: "humano", owner: "voce", deps: ["s1"], human: true },
     { id: "s2", title: "2. DTOs de cards", layer: "backend", owner: "backend-intern", deps: ["h1"] },
     { id: "s3", title: "3. service + controller", layer: "backend", owner: "backend-intern", deps: ["s2"] },
+    { id: "opt1", title: "3b. doc extra do modulo (opcional)", layer: "backend", owner: "backend-intern", deps: ["s3"] },
     { id: "r1", title: "review da camada backend", layer: "review", owner: "reviewer-intern", deps: ["s3"] },
     { id: "a1", title: "4. tool do agente Estag", layer: "ai", owner: "ai-intern", deps: ["r1"] },
     { id: "f1", title: "5. pagina cards", layer: "frontend", owner: "frontend-intern", deps: ["r1"] },
@@ -53,7 +58,7 @@ const plan = {
 
 const TOOLS = {
   "data-intern": [["Read", "apps/backend/prisma/models/task.prisma"], ["Write", "apps/backend/prisma/models/card.prisma"],
-    ["Bash", "npx prisma migrate dev --create-only --name add_card"], ["Edit", "prisma/migrations/20260801_add_card/migration.sql"]],
+    ["Bash", "npx prisma migrate dev --create-only --name add_card"], ["Edit", "prisma/migrations/20260803_add_card/migration.sql"]],
   "backend-intern": [["Read", "apps/backend/src/modules/task/dto/create.dto.ts"], ["Write", "apps/backend/src/modules/card/card.service.ts"],
     ["Edit", "apps/backend/src/app.module.ts"], ["Bash", "pnpm test -- card.service.spec.ts"]],
   "ai-intern": [["Read", "apps/backend/src/modules/estag-agent/tools"], ["Write", "tools/cards.tool.ts"], ["Edit", "estag-agent/agent.ts"]],
@@ -66,66 +71,84 @@ const TOOLS = {
 };
 
 let seq = 0;
-function machineStart(step) {
-  const role = plan.steps.find(s => s.id === step).owner, aid = "aid-" + step + "-" + (++seq);
-  push(2800, { ev: "PreToolUse", tool: "Task", sub: NS + role, info: role + ": " + step });
-  push(1800, { ev: "SubagentStart", agent: NS + role, aid });
+const owner = id => plan.steps.find(s => s.id === id).owner;
+function dispatch(role, desc) {
+  push(2400, { ev: "PreToolUse", tool: "Task", sub: NS + role, info: role + ": " + desc });
+}
+function start(role) {
+  const aid = "aid-" + (++seq);
+  push(1700, { ev: "SubagentStart", agent: NS + role, aid });
   return { role, aid };
 }
-function machineWork({ role, aid }, n) {
-  const tools = TOOLS[role];
-  for (let i = 0; i < n; i++) { const [tool, info] = tools[i % tools.length]; push(3200, { ev: "PreToolUse", tool, info, agent: NS + role, aid }); }
+function work(h, n) {
+  const tools = TOOLS[h.role];
+  for (let i = 0; i < n; i++) { const [tool, info] = tools[(seq + i) % tools.length]; push(3100, { ev: "PreToolUse", tool, info, agent: NS + h.role, aid: h.aid }); }
 }
-function machineStop({ role, aid }) {
-  push(2600, { ev: "SubagentStop", agent: NS + role, aid, tok: 3800 + (seq * 1723) % 14000 });
+function stop(h) { push(2500, { ev: "SubagentStop", agent: NS + h.role, aid: h.aid, tok: 3800 + (seq * 1723) % 14000 }); }
+function machine(step, n, desc) {
+  const role = owner(step);
+  dispatch(role, desc || (step + " " + plan.steps.find(s => s.id === step).title));
+  const h = start(role); work(h, n); stop(h);
 }
-function machine(step, n) { const h = machineStart(step); machineWork(h, n); machineStop(h); }
 function gate(id, msg) {
-  push(2200, { ev: "gate", id, status: "waiting", msg });
-  push(1200, { ev: "Stop" }); /* o leader para e espera no terminal */
-  push(9000, { ev: "gate", id, status: "approved" });
+  push(2000, { ev: "gate", id, status: "waiting", msg });
+  push(1100, { ev: "Stop" });
+  push(8500, { ev: "gate", id, status: "approved" });
 }
 
-/* ---- a run ---- */
-push(0, { ev: "PreToolUse", tool: "Read", info: "docs/superpowers/plans/2026-08-02-cards.md" });
-push(2400, { ev: "PreToolUse", tool: "Bash", info: "git rev-parse --abbrev-ref HEAD" });
-push(2000, { ev: "plan", plan });
+/* ================= a run ================= */
+push(0, { ev: "PreToolUse", tool: "Read", info: "docs/superpowers/plans/2026-08-03-cards.md" });
+push(2200, { ev: "PreToolUse", tool: "Bash", info: "git rev-parse --abbrev-ref HEAD" });
+push(1800, { ev: "plan", plan });
 
-machine("s1", 4);
+/* h0: aprovacao da escalacao — com um ajuste: opt1 removido (plan e imutavel) */
+gate("h0", "aprovar a escalação do time no terminal");
+push(1200, { ev: "skip", id: "opt1", msg: "removido na escalação — doc extra fica pra depois" });
+
+/* s1 com EXTRA DE PAI RODANDO: drift de migration no meio do passo */
+dispatch("data-intern", "s1 model + migration RLS");
+const S1 = start("data-intern"); work(S1, 2);
+dispatch("data-intern", "investigar drift das migrations no banco de dev");
+const FX0 = start("data-intern"); work(FX0, 2); stop(FX0);
+work(S1, 2); stop(S1);
+
 gate("h1", "revisar e aplicar a migration add_card");
+
 machine("s2", 3);
 machine("s3", 4);
 machine("r1", 3);
+push(1300, { ev: "note", id: "r1", msg: "reviewer: APROVADO — tenancy e permissões ok nos 2 endpoints novos" });
 
 /* a1 (ai) e f1 (frontend) em paralelo — papeis diferentes, intercalados */
-const A = machineStart("a1"), F = machineStart("f1");
-machineWork(A, 2); machineWork(F, 2); machineWork(A, 1); machineWork(F, 2);
-machineStop(A); machineStop(F);
+dispatch("ai-intern", "a1 tool do agente Estag");
+dispatch("frontend-intern", "f1 pagina cards");
+const A = start("ai-intern"), F = start("frontend-intern");
+work(A, 2); work(F, 2); work(A, 1); work(F, 2);
+stop(A); stop(F);
 
 machine("f2", 3);
 
-/* f3 e f4: LOTE PARALELO DO MESMO PAPEL (o caso que ja quebrou) */
-const P1 = machineStart("f3"), P2 = machineStart("f4");
-machineWork(P1, 2); machineWork(P2, 2); machineWork(P1, 1); machineWork(P2, 2);
-machineStop(P1); machineStop(P2);
+/* f3 e f4: lote paralelo do MESMO papel */
+dispatch("frontend-intern", "f3 cards-grid");
+dispatch("frontend-intern", "f4 cards-editor");
+const P1 = start("frontend-intern"), P2 = start("frontend-intern");
+work(P1, 2); work(P2, 2); work(P1, 1); work(P2, 2);
+stop(P1); stop(P2);
 
 machine("r2", 3);
-push(1500, { ev: "note", id: "r2", msg: "reviewer: MUDANCAS NECESSARIAS — draft nao re-sincroniza pos-upload (cards-editor.tsx:65); correcao despachada como passo extra" });
+push(1400, { ev: "note", id: "r2", msg: "reviewer: MUDANCAS NECESSARIAS — draft nao re-sincroniza pos-upload (cards-editor.tsx:65); correcao despachada como passo extra" });
 
-/* correcao FORA do plan-graph: vira card de subfluxo pendurado no r2 */
-push(2000, { ev: "PreToolUse", tool: "Task", sub: NS + "frontend-intern", info: "frontend-intern: corrigir bug do draft + a11y dos cards" });
-push(1600, { ev: "SubagentStart", agent: NS + "frontend-intern", aid: "aid-fix-1" });
-push(3000, { ev: "PreToolUse", tool: "Read", info: "apps/frontend/components/personalizacao/cards-editor.tsx", agent: NS + "frontend-intern", aid: "aid-fix-1" });
-push(3200, { ev: "PreToolUse", tool: "Edit", info: "cards-editor.tsx — hydrated.current pos upload/delete", agent: NS + "frontend-intern", aid: "aid-fix-1" });
-push(3200, { ev: "PreToolUse", tool: "Bash", info: "pnpm lint", agent: NS + "frontend-intern", aid: "aid-fix-1" });
-push(2600, { ev: "SubagentStop", agent: NS + "frontend-intern", aid: "aid-fix-1", tok: 6100 });
-machine("q1", 3);   /* q1 recebe aresta LONGA de a1 (pula colunas): rota periferica */
-push(1500, { ev: "note", id: "q1", msg: "QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature" });
+/* correcao pos-review: extra pendurado no r2 (frontend sem passo rodando) */
+dispatch("frontend-intern", "corrigir bug do draft + a11y dos cards");
+const FX1 = start("frontend-intern"); work(FX1, 3); stop(FX1);
+
+machine("q1", 3);
+push(1300, { ev: "note", id: "q1", msg: "QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature" });
 machine("u1", 3);
 machine("r3", 3);
 machine("p1", 2);
 gate("h2", "revisar o TLDR, dar push e abrir o PR");
-push(1500, { ev: "Stop" });
+push(1400, { ev: "Stop" });
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, ev.map(e => JSON.stringify(e)).join("\n") + "\n");
