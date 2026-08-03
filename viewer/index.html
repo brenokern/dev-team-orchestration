@@ -514,6 +514,8 @@ const bubbles={};   /* papel -> balao de pensamento */
 const cur={step:null,gate:null,done:false};
 let liveMode=false;
 const EV_LOG=[]; /* todos os eventos (menos plan): permite reconstruir num re-plan */
+let MODE="live",lastEvT=0; /* relogio: replay conta pelo tempo DOS EVENTOS */
+const nowT=()=>(MODE==="replay"&&lastEvT)?lastEvT:Date.now();
 /* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
 let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
 const lastDispatch={}; /* false durante o batch de catch-up */
@@ -639,7 +641,7 @@ setInterval(()=>{ /* timers dos cards ativos: N ações · Ns */
   steps.forEach(s=>{
     if((s.status==="running"||s.status==="waiting")&&s._start){
       const n=nodeEl[s.id];if(!n)return;
-      const secs=((Date.now()-s._start)/1000).toFixed(0)+"s";
+      const secs=(Math.max(0,nowT()-s._start)/1000).toFixed(0)+"s";
       n.querySelector(".n-tm").textContent=s.human?secs:((s._tools||0)+" "+t("actions")+" · "+secs);}});
 },500);
 
@@ -843,6 +845,8 @@ function closeOrphan(s){
   if(s._pr){s._pr.remove();s._pr=null;}
   const n=nodeEl[s.id];
   if(n){n.classList.remove("active");n.classList.add("done");
+    if(s._start)n.querySelector(".n-tm").textContent=
+      (s._tools||0)+" "+t("actions")+" · "+(Math.max(0,nowT()-s._start)/1000).toFixed(0)+"s";
     gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
   EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
     if(b===s.id&&p2){p2.classList.remove("lit");p2.classList.add("past");}});
@@ -965,6 +969,7 @@ function applyEvent(e){
   route(e);
 }
 function route(e){
+  if(e.t&&e.t>lastEvT)lastEvT=e.t;
   if(e.ev==="plan"){
     const replan=!!plan;
     plan=e.plan;
@@ -983,41 +988,38 @@ function route(e){
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
     const aid=e.aid||role+"#"+Date.now();
+    if(!plan){chain(role,async()=>{const tk=toks[role]||mkTok(role,320,SH-120,"ok");
+      gsap.set(tk.el,{opacity:1});tk.el.classList.add("busy");});
+      log(role.replace("-intern",""),t("offPlan"));return;}
+    /* ---- LOGICA sincrona: ordem = ordem dos EVENTOS, imune ao lag da animacao ---- */
+    let s=nextPending(role);
+    if(!s)s=addDynStep(role);
+    if(!s){log(role.replace("-intern",""),t("offPlan"));return;}
+    s.status="running";s._start=e.t||Date.now();
+    aidStep[aid]=s;
+    const other=steps.find(q=>!q.human&&q.owner===role&&q.status==="running"&&q!==s);
+    if(other)armSuspect(other,role); /* irmao sem stop: paralelo real ou stop perdido */
+    nodeEl[s.id].classList.add("active");
+    if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent=t("active");}
+    EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
+    cur.step=s;cur.gate=null;
+    leader(t("monitoring")(role,s.id),true);
+    log(role.replace("-intern",""),t("started")(s.id,s.title));
+    focus(s.x,s.y+40,stepZoom());
+    /* ---- VISUAL encadeado (so teatro) ---- */
     chain(role,async()=>{
-      let s=nextPending(role);
-      if(!s)s=addDynStep(role); /* correcao/extra: vira card de subfluxo */
-      if(!s){ /* sem plano ainda: mostra sem quebrar */
-        const tk=toks[role]||mkTok(role,320,SH-120,"ok");
-        gsap.set(tk.el,{opacity:1});tk.el.classList.add("busy");
-        log(role.replace("-intern",""),t("offPlan"));
-        return;}
-      s.status="running";s._start=e.t||Date.now();
-      aidStep[aid]=s;
-      const t=ensureTok(role,s);
-      focus(s.x,s.y+40,stepZoom());
-      if(charStep[role]&&charStep[role].status!=="running")charStep[role]=null; /* cadeira stale */
-      if(!charStep[role]){ /* personagem livre: senta NESTE passo */
-        await walk(t,SEAT(s).x,SEAT(s).y);
-        stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
+      const tk=ensureTok(role,s);
+      if(charStep[role]&&charStep[role].status!=="running")charStep[role]=null;
+      if(!charStep[role]){
+        await walk(tk,SEAT(s).x,SEAT(s).y);
+        stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
         charStep[role]=s;
-        if(liveMode){
+        if(liveMode&&s.status==="running"&&!s._pr){
           const pr=document.createElement("div");pr.className="pulse";
           pr.style.left=(SEAT(s).x-10)+"px";pr.style.top=(SEAT(s).y-8)+"px";stage.appendChild(pr);
           gsap.fromTo(pr,{opacity:.65,scale:1},{opacity:0,scale:2.1,duration:1.6,ease:"power2.out",repeat:-1});
           s._pr=pr;}
-      }else{
-        /* mesmo papel com passo ainda "running": pode ser lote paralelo REAL
-           ou o stop anterior que chegou atrasado no log (hooks sao processos
-           separados; a ordem de append nao e garantida). Reconciliador: se o
-           passo antigo ficar 20s sem stop E sem eventos, fecha como orfao. */
-        armSuspect(charStep[role],role);
       }
-      nodeEl[s.id].classList.add("active");
-      if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent=t("active");}
-      EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
-      cur.step=s;cur.gate=null;
-      leader(t("monitoring")(role,s.id),true);
-      log(role.replace("-intern",""),t("started")(s.id,s.title));
     });return;}
   if((e.ev==="PreToolUse")&&(e.aid||e.agent)){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
@@ -1037,54 +1039,58 @@ function route(e){
     return;}
   if(e.ev==="SubagentStop"){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
+    const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
+    if(e.aid)delete aidStep[e.aid];
+    if(s&&s._sus){clearTimeout(s._sus);s._sus=null;}
+    if(!s||s.status!=="running"){
+      log(role.replace("-intern",""),t("offPlanEnd"),"rep");
+      chain(role,async()=>{const tk=toks[role];if(tk)tk.el.classList.remove("busy");});
+      return;}
+    /* ---- LOGICA sincrona ---- */
+    s.status="done";
+    if(s._pr){s._pr.remove();s._pr=null;}
+    const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
+    if(s._start){
+      const fmtTok=v=>v>=1000?(v/1000).toFixed(1)+"k":String(v);
+      n.querySelector(".n-tm").textContent=
+        (s._tools||0)+" "+t("actions")+" · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s"+
+        (e.tok?" · "+fmtTok(e.tok)+" tok":"");
+    }
+    gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
+    EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
+      if(b===s.id){p2.classList.remove("lit");p2.classList.add("past");}});
+    $("#cnt").textContent=(++doneN)+" / "+steps.length;
+    lastDone=s;
+    sparkFrom(s.id,true);
+    log(role.replace("-intern",""),t("finished")(s.id),"rep");
+    if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
+      rowEl[role].classList.remove("act");
+    if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
+    /* ---- VISUAL encadeado ---- */
     chain(role,async()=>{
-      const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
-      if(e.aid)delete aidStep[e.aid];
-      if(s&&s._sus){clearTimeout(s._sus);s._sus=null;} /* stop chegou: desarma o reconciliador */
-      if(!s||s.status!=="running"){const t=toks[role];if(t)t.el.classList.remove("busy");
-        log(role.replace("-intern",""),t("offPlanEnd"),"rep");return;}
-      s.status="done";
-      if(s._pr){s._pr.remove();s._pr=null;}
-      const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
-      if(s._start){
-        const fmtTok=t=>t>=1000?(t/1000).toFixed(1)+"k":String(t);
-        n.querySelector(".n-tm").textContent=
-          (s._tools||0)+" "+t("actions")+" · "+(((e.t||Date.now())-s._start)/1000).toFixed(0)+"s"+
-          (e.tok?" · "+fmtTok(e.tok)+" tok":"");
-      }
-      gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
-      EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
-        if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
-      $("#cnt").textContent=(++doneN)+" / "+steps.length;
-      lastDone=s;
-      sparkFrom(s.id,true);
-      log(role.replace("-intern",""),t("finished")(s.id),"rep");
-      const t=toks[role];
-      if(charStep[role]&&charStep[role].id===s.id){ /* o personagem estava NESTE passo */
+      const tk=toks[role];
+      if(charStep[role]&&charStep[role].id===s.id){
         charStep[role]=null;
-        if(t){t.el.classList.remove("busy");setPose(t,"stand");}
-        const other=steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
-        if(other&&t){ /* irmao paralelo ainda rodando: senta la */
-          await walk(t,SEAT(other).x,SEAT(other).y);
-          stopMove(t);setPose(t,"sitback");t.el.classList.add("busy");
-          charStep[role]=other;
+        if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}
+        const other2=steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
+        if(other2&&tk){ /* irmao paralelo ainda rodando: senta la */
+          await walk(tk,SEAT(other2).x,SEAT(other2).y);
+          stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
+          charStep[role]=other2;
         }else{
           const nx=nextPending(role);
           if(!nx){
-            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent=t("natv");}
-            if(t)await sitCouch(t);
+            if(rowEl[role])rowEl[role].querySelector(".rs").textContent=t("natv");
+            if(tk)await sitCouch(tk);
           }else{
-            if(rowEl[role]){rowEl[role].classList.remove("act");rowEl[role].querySelector(".rs").textContent=t("waiting");}
-            if(t){await walk(t,WAIT(nx).x,WAIT(nx).y);bob(t);}
+            if(rowEl[role])rowEl[role].querySelector(".rs").textContent=t("waiting");
+            if(tk){await walk(tk,WAIT(nx).x,WAIT(nx).y);bob(tk);}
           }
         }
       }
-      if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
-        rowEl[role].classList.remove("act");
-      if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
     });return;}
   if(e.ev==="note"){ /* veredito do Leader: stream destacado + notificacao no card */
-    chain("main",()=>{
+    {
       log("leader",(e.id?e.id+" — ":"")+e.msg,"note");
       const s=e.id&&stepsById[e.id];
       if(s){
@@ -1099,18 +1105,18 @@ function route(e){
         }
         if(liveMode)focus(s.x,s.y+40,stepZoom());
       }
-    });return;}
+    }return;}
   if(e.ev==="skip"){ /* passo removido na escalacao (gate 0.5) — plan e imutavel */
-    chain("main",()=>{
+    {
       const s=stepsById[e.id];if(!s||s.status!=="pending")return;
       s.status="skipped";
       const n=nodeEl[s.id];if(n)n.classList.add("skipped");
       sparkFrom(s.id,false); /* pulado: caminho segue adiante, sem fagulha */
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
       log("leader",e.id+" — "+(e.msg||t("skipped")));
-    });return;}
+    }return;}
   if(e.ev==="gate"){
-    chain("main",async()=>{
+    {
       const s=stepsById[e.id];if(!s)return;
       const n=nodeEl[s.id];
       if(e.status==="waiting"){
@@ -1127,6 +1133,8 @@ function route(e){
       }else{
         s.status="done";
         n.classList.remove("active");n.classList.add("done");
+        if(s._start)n.querySelector(".n-tm").textContent=
+          (Math.max(0,(e.t||nowT())-s._start)/1000).toFixed(0)+"s";
         gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
         EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
           if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
@@ -1138,9 +1146,9 @@ function route(e){
         log(t("you"),t("approved"),"hum");
         leader(t("consolidating"),false);
       }
-    });return;}
+    }return;}
   if(e.ev==="Stop"){
-    chain("main",async()=>{
+    {
       /* invariante: dispatch e sincrono — se o Leader falou, nenhum subagente
          esta vivo. Passo ainda "running" = stop perdido (interrompido no
          terminal). Fecha os orfaos pra nao prender o personagem na cadeira. */
@@ -1154,7 +1162,7 @@ function route(e){
         leader(t("runDone"),false);
         log("leader",t("teamEnd"),"rep");
       }else leader(t("leaderPaused"),false);
-    });return;}
+    }return;}
 }
 
 /* ================= dialog de vereditos ================= */
@@ -1177,6 +1185,7 @@ function connect(){
   es.onmessage=m=>{
     let d;try{d=JSON.parse(m.data);}catch{return;}
     if(d.type==="hello"){
+      MODE=d.mode;
       statusKey=d.mode==="replay"?"replay":"live";stT.textContent=t(statusKey);
       st.className="status live";
       SESS=(d.session||"—").slice(0,8);
