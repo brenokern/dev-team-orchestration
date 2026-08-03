@@ -348,6 +348,8 @@ const STR={
   approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
   natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
   interrupted:"encerrado sem stop (interrompido no terminal)",
+  ended:"sessão encerrada no terminal",
+  stalled:n=>"sem eventos há "+n+"s — run interrompida?",
   skipped:"removido na escalação",
   empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
  en:{team:"team",activity:"activity",session:"session",sound:"sound",theme:"theme",
@@ -372,6 +374,8 @@ const STR={
   approved:"approved — the team moves on",teamEnd:"team finished.",you:"you",
   natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
   interrupted:"closed without stop (interrupted in the terminal)",
+  ended:"session ended in the terminal",
+  stalled:n=>"no events for "+n+"s — run interrupted?",
   skipped:"removed from the lineup",
   empty:"no events yet<br>run <b>/dev-team-orchestration:run-visual</b> in the terminal"}
 };
@@ -522,7 +526,7 @@ const bubbles={};   /* papel -> balao de pensamento */
 const cur={step:null,gate:null,done:false};
 let liveMode=false;
 const EV_LOG=[]; /* todos os eventos (menos plan): permite reconstruir num re-plan */
-let MODE="live",lastEvT=0; /* relogio: replay conta pelo tempo DOS EVENTOS */
+let MODE="live",lastEvT=0,lastRxWall=Date.now();
 const nowT=()=>(MODE==="replay"&&lastEvT)?lastEvT:Date.now();
 /* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
 let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
@@ -1153,6 +1157,13 @@ function route(e){
         leader(t("consolidating"),false);
       }
     }return;}
+  if(e.ev==="SessionEnd"){ /* fim oficial da sessao: fecha a cena com honestidade */
+    steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
+    cur.done=true;cur.gate=null;flashTitle(false);
+    gsap.to($("#gate"),{opacity:0,y:-14,duration:.45});
+    leader(t("ended"),false);log("leader",t("ended"));
+    const st=$("#status");st.className="status dead";$("#status-t").textContent=t("ended");
+    return;}
   if(e.ev==="Stop"){
     {
       /* invariante: dispatch e sincrono — se o Leader falou, nenhum subagente
@@ -1203,6 +1214,9 @@ function connect(){
   es.onopen=()=>{st.className="status live";};
   es.onerror=()=>{st.className="status dead";statusKey="disconnected";stT.textContent=t(statusKey);};
   es.onmessage=m=>{
+    lastRxWall=Date.now();
+    if(MODE==="live"&&st.className==="status dead"&&statusKey==="live"){
+      st.className="status live";stT.textContent=t("live");} /* silencio acabou */
     let d;try{d=JSON.parse(m.data);}catch{return;}
     if(d.type==="hello"){
       if(plan){location.reload();return;} /* reconexao: estado limpo, sem re-aplicar em cima */
@@ -1234,6 +1248,20 @@ window.tv={
     console.log("charStep:",Object.fromEntries(Object.entries(charStep).map(([k,v])=>[k,v&&v.id])));
     console.log("aidStep:",Object.fromEntries(Object.entries(aidStep).map(([k,v])=>[k,v&&v.id])));}
 };
+setInterval(()=>{ /* watchdog de silencio: run viva sem eventos = interrompida? */
+  if(MODE!=="live"||!plan||cur.done)return;
+  const busy=steps.some(x=>x.status==="running"||x.status==="waiting");
+  if(!busy)return;
+  const age=Math.round((Date.now()-lastRxWall)/1000);
+  if(age>300){ /* 5 min mudo: encerra a cena como interrompida */
+    steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
+    cur.done=true;flashTitle(false);
+    leader(t("ended"),false);log("leader",t("ended"));
+    $("#status").className="status dead";$("#status-t").textContent=t("ended");
+  }else if(age>90){
+    $("#status").className="status dead";$("#status-t").textContent=t("stalled")(age);
+  }
+},10000);
 setInterval(()=>{ /* invariante: personagem sentado num passo que nao esta running */
   for(const[role,s]of Object.entries(charStep)){
     if(s&&s.status!=="running")
