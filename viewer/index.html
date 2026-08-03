@@ -507,7 +507,7 @@ function stepZoom(){
   return Math.min(1.45,Math.max(.55,(wrap.clientHeight-70)/span));
 }
 const LOUNGE={tv:{x:64,y:0},couch:{x:168,y:0},seat:i=>({x:196+i*26,y:0}),table:{x:230,y:0},plant:[{x:26,y:0},{x:452,y:0}]};
-function loungeY(){const base=MIDY-38; /* lounge ao lado ESQUERDO do 1o passo */
+function loungeY(){const base=MIDY-35; /* centro visual da lounge (tv topo->mesinha base = base+35) = centro do card */
   LOUNGE.tv.y=base-16;LOUNGE.couch.y=base+14;LOUNGE.table.y=base+56;
   LOUNGE.plant[0].y=base-52;LOUNGE.plant[1].y=base-36;LOUNGE._seatY=base-2;}
 
@@ -917,68 +917,6 @@ function renderSubs(parent){
   n.classList.add("hasnotes"); /* card vira clicavel: dialog mostra os subprocessos */
 }
 
-function armSuspect(sOld,role){
-  clearTimeout(sOld._sus);
-  sOld._sus=setTimeout(()=>{
-    if(sOld.status!=="running")return;
-    if(sOld._lastEv&&Date.now()-sOld._lastEv<15000){armSuspect(sOld,role);return;} /* ainda vivo */
-    chain(role,async()=>{
-      if(sOld.status!=="running")return;
-      closeOrphan(sOld);
-      /* personagem migra pro passo que realmente esta rodando */
-      const cur2=steps.find(q=>!q.human&&q.owner===role&&q.status==="running");
-      const tk=toks[role];
-      if(cur2&&tk&&!charStep[role]){
-        await walk(tk,SEAT(cur2).x,SEAT(cur2).y);
-        stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
-        charStep[role]=cur2;}
-    });
-  },20000);
-}
-function addDynStep(role){
-  if(!plan||!steps.length)return null;
-  /* pai: o passo RODANDO do proprio papel (extra nasce dele — ex.: drift de
-     migration no meio do T1) > ultimo concluido (fix pos-review) > ultimo passo */
-  const running=steps.find(q=>!q.human&&!q._dyn&&q.owner===role&&q.status==="running");
-  const parent=running||lastDone||steps[steps.length-1];
-  dynN++;
-  const id="x"+dynN;
-  const raw=lastDispatch[role]||"";
-  const title=raw||((LANG==="pt"?"passo extra de ":"extra step by ")+role.replace("-intern",""));
-  /* slot mais proximo do PAI que nao colida com outro extra; palco cresce se precisar */
-  let x=parent.x+Math.round(COLW*.85);
-  while(steps.some(q=>q._dyn&&Math.abs(q.x-x)<COLW*.9))x+=COLW;
-  if(x>SW-170){SW=x+300;stage.style.width=SW+"px";edgesSvg.setAttribute("width",SW);}
-  const st={id,title:title.slice(0,90),layer:"extra",owner:role,deps:[parent.id],
-    status:"pending",_c:99,_dyn:true,x,y:DYNY};
-  steps.push(st);stepsById[id]=st;
-  /* card */
-  const n=document.createElement("div");n.className="node dync";
-  n.style.left=st.x+"px";n.style.top=st.y+"px";
-  n.innerHTML=`<div class="n-shell"><div class="n-core" style="height:${CORE_H}px">
-    <div class="n-lay">extra</div><div class="n-t" title="${title.replace(/"/g,"&quot;")}">${st.title}</div>
-    <div class="n-f"><span class="n-tm">0s</span></div>
-    <div class="n-check">&#10003;</div></div></div><span class="p-in"></span>`;
-  stage.appendChild(n);nodeEl[id]=n;
-  gsap.set(n,{x:-88,y:-CARD_H/2});
-  gsap.fromTo(n,{opacity:0,scale:.86,filter:"blur(8px)"},
-    {opacity:1,scale:1,filter:"blur(0px)",duration:.7,ease:"power4.out"});
-  /* mesa */
-  const d=document.createElement("div");d.className="furn";
-  d.style.left=DESK(st).x+"px";d.style.top=DESK(st).y+"px";
-  d.innerHTML=`<div class="fshadow" style="left:-4px;top:42px;width:76px;height:11px"></div>`+deskSvg();
-  stage.appendChild(d);deskEl[id]=d;
-  gsap.fromTo(d,{opacity:0,y:8},{opacity:1,y:0,duration:.7,ease:"power4.out"});
-  /* aresta tracejada saindo do card que originou */
-  const x1=parent.x+93,x2=st.x-93,dx=40;
-  const pth=document.createElementNS("http://www.w3.org/2000/svg","path");
-  pth.setAttribute("d",`M ${x1} ${parent.y} C ${x1+dx} ${parent.y}, ${x2-dx} ${st.y}, ${x2} ${st.y}`);
-  pth.classList.add("dyn");
-  edgesSvg.appendChild(pth);pathEl[parent.id+">"+id]=pth;EDGES.push([parent.id,id]);
-  gsap.fromTo(pth,{opacity:0},{opacity:1,duration:.7});
-  $("#cnt").textContent=doneN+" / "+steps.length;
-  return st;
-}
 const nextOwn=(role,after)=>{const i=steps.indexOf(after);
   return steps.find((s,j)=>j>i&&!s.human&&s.owner===role&&s.status==="pending");};
 
