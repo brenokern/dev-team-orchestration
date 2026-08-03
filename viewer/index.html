@@ -488,7 +488,7 @@ function computeLayout(p){
   SH=Math.max(720,FLOWY.max+330);
 }
 /* geometria em funcao da ALTURA REAL do card (uniforme, medida apos render) */
-let CARD_H=134;
+let CARD_H=112,CORE_H=100; /* CARD_H = offsetHeight MEDIDO do node, nunca estimado */
 const DESK=s=>({x:s.x-33,y:s.y+CARD_H/2-5});
 const SEAT=s=>({x:s.x-18,y:s.y+CARD_H/2+25});
 const WAIT=s=>({x:s.x-104,y:s.y+CARD_H/2-11});
@@ -708,7 +708,8 @@ function buildGraph(){
   steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
     c.style.height="auto";core=Math.max(core,c.offsetHeight);});
   steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=core+"px";});
-  CARD_H=core+34;
+  CORE_H=core;
+  CARD_H=nodeEl[steps[0].id].offsetHeight; /* altura REAL (core + moldura) */
   steps.forEach(s=>gsap.set(nodeEl[s.id],
     {x:-88,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"}));
   /* fonte web carrega depois: re-mede e re-centraliza (altura pode mudar) */
@@ -717,8 +718,9 @@ function buildGraph(){
     steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
       c.style.height="auto";c2=Math.max(c2,c.offsetHeight);});
     steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=c2+"px";});
-    if(Math.abs(c2+34-CARD_H)>2){
-      CARD_H=c2+34;
+    const nh=nodeEl[steps[0].id].offsetHeight;
+    if(Math.abs(nh-CARD_H)>2){
+      CORE_H=c2;CARD_H=nh;
       steps.forEach(s=>{
         gsap.set(nodeEl[s.id],{y:-CARD_H/2});
         const d=deskEl[s.id];
@@ -869,7 +871,7 @@ function addDynStep(role){
   /* card */
   const n=document.createElement("div");n.className="node dync";
   n.style.left=st.x+"px";n.style.top=st.y+"px";
-  n.innerHTML=`<div class="n-shell"><div class="n-core" style="height:${CARD_H-34}px">
+  n.innerHTML=`<div class="n-shell"><div class="n-core" style="height:${CORE_H}px">
     <div class="n-lay">extra</div><div class="n-t" title="${title.replace(/"/g,"&quot;")}">${st.title}</div>
     <div class="n-f"><span class="n-tm">0s</span></div>
     <div class="n-check">&#10003;</div></div></div><span class="p-in"></span>`;
