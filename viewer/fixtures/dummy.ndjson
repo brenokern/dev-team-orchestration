@@ -68,32 +68,38 @@
 {"t":1700000191800,"ev":"PreToolUse","tool":"Read","info":"apps/backend/src/modules/card/card.service.ts","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r2-10"}
 {"t":1700000195000,"ev":"PreToolUse","tool":"Read","info":"cards/components/card-grid.tsx","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r2-10"}
 {"t":1700000197600,"ev":"SubagentStop","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r2-10","tok":7030}
-{"t":1700000199100,"ev":"note","id":"r2","msg":"reviewer: APROVADO com 1 recomendacao — extrair o fallback de gradiente duplicado em cards-grid e cards-editor num helper"}
-{"t":1700000201900,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:qa-intern","info":"qa-intern: q1"}
-{"t":1700000203700,"ev":"SubagentStart","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
-{"t":1700000206900,"ev":"PreToolUse","tool":"Bash","info":"pnpm lint","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
-{"t":1700000210100,"ev":"PreToolUse","tool":"Bash","info":"pnpm build","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
-{"t":1700000213300,"ev":"PreToolUse","tool":"Bash","info":"pnpm test — 218 passed","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
-{"t":1700000215900,"ev":"SubagentStop","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11","tok":8753}
-{"t":1700000217400,"ev":"note","id":"q1","msg":"QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature"}
-{"t":1700000220200,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:ux-intern","info":"ux-intern: u1"}
-{"t":1700000222000,"ev":"SubagentStart","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
-{"t":1700000225200,"ev":"PreToolUse","tool":"Bash","info":"playwright test e2e/cards.spec.ts — admin","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
-{"t":1700000228400,"ev":"PreToolUse","tool":"Bash","info":"playwright test e2e/cards.spec.ts — individual","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
-{"t":1700000231600,"ev":"PreToolUse","tool":"Read","info":"axe report — 0 criticos","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
-{"t":1700000234200,"ev":"SubagentStop","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12","tok":10476}
-{"t":1700000237000,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:reviewer-intern","info":"reviewer-intern: r3"}
-{"t":1700000238800,"ev":"SubagentStart","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
-{"t":1700000242000,"ev":"PreToolUse","tool":"Bash","info":"git diff develop...HEAD --stat","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
-{"t":1700000245200,"ev":"PreToolUse","tool":"Read","info":"apps/backend/src/modules/card/card.service.ts","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
-{"t":1700000248400,"ev":"PreToolUse","tool":"Read","info":"cards/components/card-grid.tsx","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
-{"t":1700000251000,"ev":"SubagentStop","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13","tok":12199}
-{"t":1700000253800,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:pr-writer-intern","info":"pr-writer-intern: p1"}
-{"t":1700000255600,"ev":"SubagentStart","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
-{"t":1700000258800,"ev":"PreToolUse","tool":"Bash","info":"git log develop..HEAD --oneline --stat","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
-{"t":1700000262000,"ev":"PreToolUse","tool":"Write","info":"TLDR do PR","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
-{"t":1700000264600,"ev":"SubagentStop","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14","tok":13922}
-{"t":1700000266800,"ev":"gate","id":"h2","status":"waiting","msg":"revisar o TLDR, dar push e abrir o PR"}
-{"t":1700000268000,"ev":"Stop"}
-{"t":1700000277000,"ev":"gate","id":"h2","status":"approved"}
-{"t":1700000278500,"ev":"Stop"}
+{"t":1700000199100,"ev":"note","id":"r2","msg":"reviewer: MUDANCAS NECESSARIAS — draft nao re-sincroniza pos-upload (cards-editor.tsx:65); correcao despachada como passo extra"}
+{"t":1700000201100,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:frontend-intern","info":"frontend-intern: corrigir bug do draft + a11y dos cards"}
+{"t":1700000202700,"ev":"SubagentStart","agent":"dev-team-orchestration:frontend-intern","aid":"aid-fix-1"}
+{"t":1700000205700,"ev":"PreToolUse","tool":"Read","info":"apps/frontend/components/personalizacao/cards-editor.tsx","agent":"dev-team-orchestration:frontend-intern","aid":"aid-fix-1"}
+{"t":1700000208900,"ev":"PreToolUse","tool":"Edit","info":"cards-editor.tsx — hydrated.current pos upload/delete","agent":"dev-team-orchestration:frontend-intern","aid":"aid-fix-1"}
+{"t":1700000212100,"ev":"PreToolUse","tool":"Bash","info":"pnpm lint","agent":"dev-team-orchestration:frontend-intern","aid":"aid-fix-1"}
+{"t":1700000214700,"ev":"SubagentStop","agent":"dev-team-orchestration:frontend-intern","aid":"aid-fix-1","tok":6100}
+{"t":1700000217500,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:qa-intern","info":"qa-intern: q1"}
+{"t":1700000219300,"ev":"SubagentStart","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
+{"t":1700000222500,"ev":"PreToolUse","tool":"Bash","info":"pnpm lint","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
+{"t":1700000225700,"ev":"PreToolUse","tool":"Bash","info":"pnpm build","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
+{"t":1700000228900,"ev":"PreToolUse","tool":"Bash","info":"pnpm test — 218 passed","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11"}
+{"t":1700000231500,"ev":"SubagentStop","agent":"dev-team-orchestration:qa-intern","aid":"aid-q1-11","tok":8753}
+{"t":1700000233000,"ev":"note","id":"q1","msg":"QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature"}
+{"t":1700000235800,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:ux-intern","info":"ux-intern: u1"}
+{"t":1700000237600,"ev":"SubagentStart","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
+{"t":1700000240800,"ev":"PreToolUse","tool":"Bash","info":"playwright test e2e/cards.spec.ts — admin","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
+{"t":1700000244000,"ev":"PreToolUse","tool":"Bash","info":"playwright test e2e/cards.spec.ts — individual","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
+{"t":1700000247200,"ev":"PreToolUse","tool":"Read","info":"axe report — 0 criticos","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12"}
+{"t":1700000249800,"ev":"SubagentStop","agent":"dev-team-orchestration:ux-intern","aid":"aid-u1-12","tok":10476}
+{"t":1700000252600,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:reviewer-intern","info":"reviewer-intern: r3"}
+{"t":1700000254400,"ev":"SubagentStart","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
+{"t":1700000257600,"ev":"PreToolUse","tool":"Bash","info":"git diff develop...HEAD --stat","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
+{"t":1700000260800,"ev":"PreToolUse","tool":"Read","info":"apps/backend/src/modules/card/card.service.ts","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
+{"t":1700000264000,"ev":"PreToolUse","tool":"Read","info":"cards/components/card-grid.tsx","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13"}
+{"t":1700000266600,"ev":"SubagentStop","agent":"dev-team-orchestration:reviewer-intern","aid":"aid-r3-13","tok":12199}
+{"t":1700000269400,"ev":"PreToolUse","tool":"Task","sub":"dev-team-orchestration:pr-writer-intern","info":"pr-writer-intern: p1"}
+{"t":1700000271200,"ev":"SubagentStart","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
+{"t":1700000274400,"ev":"PreToolUse","tool":"Bash","info":"git log develop..HEAD --oneline --stat","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
+{"t":1700000277600,"ev":"PreToolUse","tool":"Write","info":"TLDR do PR","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14"}
+{"t":1700000280200,"ev":"SubagentStop","agent":"dev-team-orchestration:pr-writer-intern","aid":"aid-p1-14","tok":13922}
+{"t":1700000282400,"ev":"gate","id":"h2","status":"waiting","msg":"revisar o TLDR, dar push e abrir o PR"}
+{"t":1700000283600,"ev":"Stop"}
+{"t":1700000292600,"ev":"gate","id":"h2","status":"approved"}
+{"t":1700000294100,"ev":"Stop"}

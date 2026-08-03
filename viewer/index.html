@@ -157,6 +157,10 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .node.humc .p-in,.node.humc .p-out{border-color:var(--hold-dim)}
 .node.humc.done .p-in,.node.humc.done .p-out{border-color:var(--live)}
 .node.humc .n-shell{border:1px dashed var(--hold-dim)}
+/* passo extra (subfluxo criado em runtime por correcoes) */
+.node.dync .n-shell{border:1px dashed var(--edge-past)}
+.node.dync .n-lay{color:var(--faint)}
+.edges path.dyn{stroke-dasharray:5 6}
 .node.humc .n-lay{color:var(--hold)}
 .node.humc.active .n-shell{border-style:solid;border-color:var(--hold);background:var(--hold-soft);
   animation:gpulse 1.3s ease-in-out infinite}
@@ -496,7 +500,10 @@ const aidStep={};   /* agent_id -> passo (suporta lote paralelo do MESMO papel) 
 const charStep={};  /* papel -> passo onde o personagem esta sentado */
 const bubbles={};   /* papel -> balao de pensamento */
 const cur={step:null,gate:null,done:false};
-let liveMode=false; /* false durante o batch de catch-up */
+let liveMode=false;
+/* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
+let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
+const lastDispatch={}; /* false durante o batch de catch-up */
 
 /* ================= zoom + pan + camera ================= */
 let k=1,ox=0,oy=0,cam=null;
@@ -671,7 +678,8 @@ function buildGraph(){
     c.style.height="auto";core=Math.max(core,c.offsetHeight);});
   steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=core+"px";});
   CARD_H=core+34;
-  SH=Math.max(720,FLOWY.max+196+CARD_H);
+  DYNY=FLOWY.max+CARD_H+118; /* faixa do subfluxo, abaixo do fluxo planejado */
+  SH=Math.max(720,DYNY+CARD_H/2+185);
   loungeY();
   stage.style.width=SW+"px";stage.style.height=SH+"px";
   edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);
@@ -741,6 +749,43 @@ const shortPath=str=>String(str||"").split(" ").map(tok=>{
 const chains={}; /* fila por papel: ordem interna garantida, papeis em paralelo */
 const chain=(key,fn)=>{chains[key]=(chains[key]||Promise.resolve()).then(fn).catch(()=>{});};
 const nextPending=role=>steps.find(s=>!s.human&&s.owner===role&&s.status==="pending");
+function addDynStep(role){
+  if(!plan||!steps.length)return null;
+  const parent=lastDone||steps[steps.length-1];
+  dynN++;
+  const id="x"+dynN;
+  const raw=lastDispatch[role]||"";
+  const title=raw||((LANG==="pt"?"passo extra de ":"extra step by ")+role.replace("-intern",""));
+  const x=Math.max(lastDynX+COLW,parent.x+Math.round(COLW*.85));lastDynX=x;
+  const st={id,title:title.slice(0,90),layer:"extra",owner:role,deps:[parent.id],
+    status:"pending",_c:99,_dyn:true,x,y:DYNY};
+  steps.push(st);stepsById[id]=st;
+  /* card */
+  const n=document.createElement("div");n.className="node dync";
+  n.style.left=st.x+"px";n.style.top=st.y+"px";
+  n.innerHTML=`<div class="n-shell"><div class="n-core" style="height:${CARD_H-34}px">
+    <div class="n-lay">extra</div><div class="n-t" title="${title.replace(/"/g,"&quot;")}">${st.title}</div>
+    <div class="n-f"><span class="n-tm">0s</span></div>
+    <div class="n-check">&#10003;</div></div></div><span class="p-in"></span>`;
+  stage.appendChild(n);nodeEl[id]=n;
+  gsap.fromTo(n,{opacity:0,scale:.86,filter:"blur(8px)"},
+    {opacity:1,scale:1,filter:"blur(0px)",duration:.7,ease:"power4.out"});
+  /* mesa */
+  const d=document.createElement("div");d.className="furn";
+  d.style.left=DESK(st).x+"px";d.style.top=DESK(st).y+"px";
+  d.innerHTML=`<div class="fshadow" style="left:-4px;top:42px;width:76px;height:11px"></div>`+deskSvg();
+  stage.appendChild(d);deskEl[id]=d;
+  gsap.fromTo(d,{opacity:0,y:8},{opacity:1,y:0,duration:.7,ease:"power4.out"});
+  /* aresta tracejada saindo do card que originou */
+  const x1=parent.x+93,x2=st.x-93,dx=40;
+  const pth=document.createElementNS("http://www.w3.org/2000/svg","path");
+  pth.setAttribute("d",`M ${x1} ${parent.y} C ${x1+dx} ${parent.y}, ${x2-dx} ${st.y}, ${x2} ${st.y}`);
+  pth.classList.add("dyn");
+  edgesSvg.appendChild(pth);pathEl[parent.id+">"+id]=pth;EDGES.push([parent.id,id]);
+  gsap.fromTo(pth,{opacity:0},{opacity:1,duration:.7});
+  $("#cnt").textContent=doneN+" / "+steps.length;
+  return st;
+}
 const nextOwn=(role,after)=>{const i=steps.indexOf(after);
   return steps.find((s,j)=>j>i&&!s.human&&s.owner===role&&s.status==="pending");};
 
@@ -792,10 +837,11 @@ function applyEvent(e){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
     const aid=e.aid||role+"#"+Date.now();
     chain(role,async()=>{
-      const s=nextPending(role);
-      if(!s){ /* dispatch fora do plano (ex.: consulta avulsa): mostra sem quebrar */
-        const t=toks[role]||mkTok(role,320,SH-120,"ok");
-        gsap.set(t.el,{opacity:1});t.el.classList.add("busy");
+      let s=nextPending(role);
+      if(!s)s=addDynStep(role); /* correcao/extra: vira card de subfluxo */
+      if(!s){ /* sem plano ainda: mostra sem quebrar */
+        const tk=toks[role]||mkTok(role,320,SH-120,"ok");
+        gsap.set(tk.el,{opacity:1});tk.el.classList.add("busy");
         log(role.replace("-intern",""),t("offPlan"));
         return;}
       s.status="running";s._start=e.t||Date.now();
@@ -822,7 +868,9 @@ function applyEvent(e){
   if((e.ev==="PreToolUse")&&(e.aid||e.agent)){
     const role=aidRole[e.aid]||e.agent;if(!role)return;
     const who=role==="leader"?"leader":role.replace("-intern","");
-    if(e.tool==="Task"||e.tool==="Agent"){log("leader",t("dispatched")+(e.info||e.sub||""));return;}
+    if(e.tool==="Task"||e.tool==="Agent"){
+      if(e.sub)lastDispatch[e.sub]=String(e.info||"").replace(/^[a-z-]+\s*:\s*/i,"");
+      log("leader",t("dispatched")+(e.info||e.sub||""));return;}
     const line=(e.tool||"")+" "+shortPath(e.info);
     log(who,line);
     think(role,line);
@@ -851,6 +899,7 @@ function applyEvent(e){
       EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
         if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
       $("#cnt").textContent=(++doneN)+" / "+steps.length;
+      lastDone=s;
       log(role.replace("-intern",""),t("finished")(s.id),"rep");
       const t=toks[role];
       if(charStep[role]===s){ /* o personagem estava NESTE passo: decide pra onde vai */
@@ -914,6 +963,7 @@ function applyEvent(e){
         EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
           if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
         $("#cnt").textContent=(++doneN)+" / "+steps.length;
+        lastDone=s;
         cur.gate=null;flashTitle(false);
         gsap.to($("#gate"),{opacity:0,y:-14,duration:.45,ease:"power3.in"});
         log(t("you"),t("approved"),"hum");

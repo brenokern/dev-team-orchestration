@@ -110,7 +110,15 @@ machineWork(P1, 2); machineWork(P2, 2); machineWork(P1, 1); machineWork(P2, 2);
 machineStop(P1); machineStop(P2);
 
 machine("r2", 3);
-push(1500, { ev: "note", id: "r2", msg: "reviewer: APROVADO com 1 recomendacao — extrair o fallback de gradiente duplicado em cards-grid e cards-editor num helper" });
+push(1500, { ev: "note", id: "r2", msg: "reviewer: MUDANCAS NECESSARIAS — draft nao re-sincroniza pos-upload (cards-editor.tsx:65); correcao despachada como passo extra" });
+
+/* correcao FORA do plan-graph: vira card de subfluxo pendurado no r2 */
+push(2000, { ev: "PreToolUse", tool: "Task", sub: NS + "frontend-intern", info: "frontend-intern: corrigir bug do draft + a11y dos cards" });
+push(1600, { ev: "SubagentStart", agent: NS + "frontend-intern", aid: "aid-fix-1" });
+push(3000, { ev: "PreToolUse", tool: "Read", info: "apps/frontend/components/personalizacao/cards-editor.tsx", agent: NS + "frontend-intern", aid: "aid-fix-1" });
+push(3200, { ev: "PreToolUse", tool: "Edit", info: "cards-editor.tsx — hydrated.current pos upload/delete", agent: NS + "frontend-intern", aid: "aid-fix-1" });
+push(3200, { ev: "PreToolUse", tool: "Bash", info: "pnpm lint", agent: NS + "frontend-intern", aid: "aid-fix-1" });
+push(2600, { ev: "SubagentStop", agent: NS + "frontend-intern", aid: "aid-fix-1", tok: 6100 });
 machine("q1", 3);   /* q1 recebe aresta LONGA de a1 (pula colunas): rota periferica */
 push(1500, { ev: "note", id: "q1", msg: "QA verde: lint, build e 218 specs. Nenhum teste afetado fora da feature" });
 machine("u1", 3);
