@@ -19,9 +19,10 @@ um time de especialistas (subagents) para transformar um **plano de implementaç
 em uma feature entregue, testada, revisada e commitada localmente — pronta pra você abrir o PR.
 
 O Leader é a sessão principal (seu único login). Os especialistas são despachados **via a
-ferramenta Agent**. As camadas rodam em ordem (sequenciais entre si), mas tarefas
-**independentes dentro de uma mesma camada** podem ser despachadas em paralelo (ver o passo 3
-do fluxo). Cada dispatch vira um subagent real — o que também faz cada um aparecer como
+ferramenta Agent**. As camadas rodam em ordem (sequenciais entre si). **Um papel é UMA pessoa:
+passos do mesmo papel são SEMPRE sequenciais** — paralelismo só existe entre PAPÉIS DIFERENTES
+com trabalho genuinamente independente (ver o passo 2 do fluxo). Cada dispatch vira um subagent
+real — o que também faz cada um aparecer como
 personagem no **Pixel Agents** (ver `references/pixel-agents.md`).
 
 <HARD-GATE>
@@ -123,10 +124,13 @@ no dispatch desse passo.
   `sonnet` (mais rápido) e manter `opus` só no reviewer, quando a camada for repetitiva.
 
 1. Anuncie: `▶ Camada <X>`.
-2. **Liste os passos atômicos** do plano naquela camada. Marque quais são **independentes**
-   (arquivos disjuntos + sem contrato entre si + mesmo papel) — esses podem ir em **lote
-   paralelo** (vários `Agent` numa mensagem só); o resto vai em sequência, **um passo por
-   dispatch**. Na dúvida, sequencial (colisão de arquivo é pior que lentidão).
+2. **Liste os passos atômicos** do plano naquela camada e despache-os **em sequência, um por
+   dispatch**. REGRA DURA: **NUNCA duas tarefas do MESMO papel em paralelo** — um subagente é
+   uma pessoa, não uma fábrica; o mesmo `*-intern` com dois dispatches simultâneos não faz
+   sentido e embaralha contratos e commits. Lote paralelo (vários `Agent` numa mensagem) é
+   permitido APENAS entre **papéis diferentes**, com trabalho genuinamente independente
+   (arquivos disjuntos + sem contrato entre si) — situação rara, já que as camadas são
+   sequenciais por natureza. Na dúvida, sequencial.
 3. **Despache cada passo** (ou lote independente) via **Agent**. Se o plugin estiver instalado,
    os papéis existem como **subagents nomeados** — use `subagent_type: "<papel>-intern"` (ex.:
    `backend-intern`); o prompt do papel + rails já vivem no agente, então o `prompt` do dispatch
