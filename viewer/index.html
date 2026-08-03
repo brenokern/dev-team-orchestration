@@ -597,7 +597,9 @@ function stopMove(t){if(t._iv){clearInterval(t._iv);t._iv=null;}
 async function walk(t,x,y,speed){
   const el=t.el,cx=parseFloat(el.style.left),cy=parseFloat(el.style.top);
   const d=Math.hypot(x-cx,y-cy);if(d<4)return;
-  if(!liveMode){gsap.set(el,{left:x,top:y});return;} /* catch-up: teleporta */
+  /* catch-up OU aba em segundo plano: teleporta — rAF congelado travaria a
+     fila do papel no await e o estado ficaria para tras da run real */
+  if(!liveMode||document.hidden){stopMove(t);gsap.set(el,{left:x,top:y,y:0});return;}
   stopMove(t);gsap.set(el,{y:0});t.flip=x<cx;
   let f=0,intr=false;setPose(t,"walk0");
   const iv=setInterval(()=>{f=1-f;setPose(t,"walk"+f);},150);t._iv=iv;
@@ -840,7 +842,7 @@ function ensureTok(role,s){
 
 /* balao de pensamento: nasce da cabeca, centralizado, flutuando enquanto pensa */
 function think(role,text){
-  const t=toks[role];if(!t||!liveMode)return;
+  const t=toks[role];if(!t||!liveMode||document.hidden)return;
   if(t.pose!=="sitback")return; /* so pensa quem esta sentado trabalhando */
   let b=bubbles[role];
   if(!b){

@@ -74,19 +74,33 @@ async function hookMode() {
   if (p.agent_type) e.agent = p.agent_type;
   if (p.agent_id) e.aid = p.agent_id;
   /* consumo de tokens do subagente: minerado do transcript no encerramento.
-     Formato do transcript e interno/instavel — parser tolerante, falha em silencio. */
-  if (p.hook_event_name === "SubagentStop" && p.agent_transcript_path) {
-    try {
+     Formato do transcript e interno/instavel — parser estruturado + fallback
+     por regex; qualquer falha e silenciosa. */
+  if (p.hook_event_name === "SubagentStop") {
+    const tp = p.agent_transcript_path || p.transcript_path;
+    if (tp) try {
+      const txt = fs.readFileSync(tp, "utf8");
       let out = 0, ctx = 0;
-      for (const line of fs.readFileSync(p.agent_transcript_path, "utf8").split("\n")) {
-        if (!line.includes('"usage"')) continue;
+      for (const line of txt.split("\n")) {
+        if (!line.includes("usage")) continue;
+        let u = null;
         try {
-          const o = JSON.parse(line), u = (o.message && o.message.usage) || o.usage;
-          if (!u) continue;
-          out += u.output_tokens || 0;
-          const i = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
-          if (i > ctx) ctx = i;
+          const o = JSON.parse(line);
+          u = (o.message && o.message.usage) || o.usage ||
+              (o.message && o.message.message && o.message.message.usage) || null;
         } catch {}
+        if (!u) { /* fallback: extrai por regex direto da linha */
+          const g = re => { const m = line.match(re); return m ? parseInt(m[1], 10) : 0; };
+          u = {
+            output_tokens: g(/"output_tokens"\s*:\s*(\d+)/),
+            input_tokens: g(/"input_tokens"\s*:\s*(\d+)/),
+            cache_read_input_tokens: g(/"cache_read_input_tokens"\s*:\s*(\d+)/),
+            cache_creation_input_tokens: g(/"cache_creation_input_tokens"\s*:\s*(\d+)/)
+          };
+        }
+        out += u.output_tokens || 0;
+        const i = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+        if (i > ctx) ctx = i;
       }
       if (out || ctx) e.tok = ctx + out;
     } catch {}
