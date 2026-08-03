@@ -55,6 +55,9 @@ function sse(res) {
   res.write(`data: ${JSON.stringify({ type: "batch", events: lines })}\n\n`);
 }
 const broadcast = obj => { const d = `data: ${JSON.stringify(obj)}\n\n`; for (const c of clients) c.write(d); };
+/* keepalive: sem isso o browser derruba o SSE ocioso e o EventSource
+   reconecta sozinho — re-tocando o replay/batch por cima do estado */
+setInterval(() => { for (const c of clients) { try { c.write(":ping\n\n"); } catch {} } }, 25000);
 
 function readLines() {
   if (!src.file) return [];
