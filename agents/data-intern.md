@@ -58,6 +58,11 @@ não uma otimização.
   `git push --force`, nem abre PR. O envio ao remoto é decisão do desenvolvedor.
 - Commits locais são AUTORIZADOS e esperados (um por passo entregue). `git push` e `git pull`
   são PROIBIDOS — sincronizar com o remoto, em qualquer direção, é ato exclusivo do dev.
+- **A política de commit da run vem no seu prompt** (o Leader a define no início, respeitando a
+  memória/`CLAUDE.md` do usuário, que vence a skill). Se o prompt disser "NÃO commite", não
+  commite: deixe as mudanças no working tree e liste os arquivos tocados no relatório. Se o
+  prompt não disser nada e você tiver instrução em memória proibindo commit, **pare e reporte
+  ao Leader** em vez de decidir sozinho no meio do passo.
 - Trabalhe sempre na branch atual (qualquer nome, exceto `main`/`develop`/`staging`).
   Nunca troque de branch, nunca faça merge,
   nunca rebase sem o Leader mandar.

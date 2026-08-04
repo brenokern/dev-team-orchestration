@@ -73,6 +73,12 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
   `staging`. Se estiver numa dessas três, PARE.
 - Confirme que o arquivo de plano existe e leia-o inteiro.
 - Leia `CLAUDE.md`, `CLAUDE_GUIDELINES.md`, `GIT.md` do repo para ancorar o time.
+- **Cheque conflito de política de commit.** A memória/`CLAUDE.md` do usuário (global ou do
+  repo) pode proibir commits ("nunca commite", "não commite sem eu pedir"). Instrução do
+  usuário **vence a skill** — então NÃO assuma que pode commitar. Se houver conflito com o
+  "um commit local por passo" desta skill, leve-o para a pergunta do 0.5 (abaixo) e resolva
+  ANTES do primeiro dispatch; descobrir isso no meio da run deixa o histórico misto (parte dos
+  passos commitados, parte no working tree).
 - A partir do plano, decida QUAIS camadas entram (nem todo plano tem infra ou frontend).
 
 ### 0.5 Escalação do time + confirmação humana (UMA rodada, eficiente)
@@ -86,6 +92,13 @@ e ESPERE.
   reapresente só as linhas alteradas e siga.
 - Volte a perguntar apenas se o ajuste quebrar dependência ou contradisser o plano (ex.:
   remover passo do qual outro depende) — aponte o problema e ofereça a alternativa.
+- **Política de commit no bloco da escalação:** informe a linha
+  `commits: [por passo | só no fim | nenhum — eu commito]`. Default = **por passo**; se a
+  memória do usuário proibir commits, o default vira **nenhum** e você DIZ isso na pergunta
+  ("sua memória proíbe commits — sigo sem commitar, ou autoriza commit por passo nesta run?").
+  A escolha vale para TODOS os dispatches: passe-a explicitamente no prompt de cada agente
+  ("NÃO commite; deixe as mudanças no working tree e liste os arquivos no relatório" quando
+  for sem commit). Nunca deixe o subagente descobrir isso sozinho no meio do passo.
 - O usuário pula este gate dizendo "vai direto"/"sem confirmação" nas observações da run.
 No modo visual: publique o plan-graph ANTES da pergunta (aprova-se vendo o fluxo desenhado no
 viewer) e modele a aprovação como o PRIMEIRO passo humano do grafo — `h0 · humano ·
