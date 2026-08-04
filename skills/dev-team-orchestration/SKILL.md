@@ -59,6 +59,9 @@ descrição, então no modo skill-avulsa use a linguagem natural. O plano vem da
 - **Git: SÓ COMMIT LOCAL é autorizado — NUNCA `git push`, NUNCA `git pull`.** Commits locais
   são parte do fluxo (um por passo, conventional-commit com escopo, GIT.md); sincronizar com o
   remoto, em qualquer direção, é decisão exclusiva do dev.
+- **Mensagem de commit sem co-autoria.** NUNCA `Co-Authored-By: Claude ...`, nunca
+  "Generated with Claude Code", nunca emoji/link de ferramenta — a mensagem termina no conteúdo
+  técnico.
 - **NUNCA aplicar migration.** O data-intern para no `.sql` gerado e entrega pra revisão humana.
 - **Fica na lane.** Cada agente só toca os paths do seu papel. Reviewer/QA/UX não editam código
   de feature (o ux-intern só escreve seus próprios testes e2e).

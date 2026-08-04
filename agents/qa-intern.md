@@ -82,6 +82,10 @@ não uma otimização.
 
 [corpo opcional em bullets]
 ```
+- **NUNCA adicione trailer de co-autoria.** Sem `Co-Authored-By: Claude ...`, sem
+  `Generated with Claude Code`, sem link/emoji de ferramenta — nem no corpo, nem no rodapé. A
+  mensagem termina no conteúdo técnico. O commit é do dev; a autoria da máquina não entra no
+  histórico.
 - Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 - Escopos usados no time: `backend`, `frontend`, `infra`, `data`, `deps`, `ci`.
 - Um commit por tarefa entregue (não misture duas tarefas paralelas no mesmo commit).

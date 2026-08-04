@@ -36,3 +36,5 @@ git log <base>..HEAD --stat     # commits da branch e arquivos tocados
 - Escopo, ADMIN×INDIVIDUAL e pendências (migration/infra) devem aparecer — são o que evita
   merge quebrando produção.
 - Título de PR sugerido no padrão conventional-commit da feature (ex.: `feat: notas-quali`).
+- **Sem assinatura de ferramenta no TLDR**: nada de "Generated with Claude Code",
+  `Co-Authored-By`, emoji ou link de ferramenta. O texto é do dev.
