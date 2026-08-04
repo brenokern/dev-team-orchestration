@@ -349,6 +349,8 @@ const STR={
   natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
   interrupted:"encerrado sem stop (interrompido no terminal)",
   ended:"sessão encerrada no terminal",
+  requeued:"interrompido — de volta para a fila",
+  reopened:"re-despachado — reaberto",
   stalled:n=>"sem eventos há "+n+"s — run interrompida?",
   skipped:"removido na escalação",
   empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
@@ -375,6 +377,8 @@ const STR={
   natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
   interrupted:"closed without stop (interrupted in the terminal)",
   ended:"session ended in the terminal",
+  requeued:"interrupted — back in the queue",
+  reopened:"re-dispatched — reopened",
   stalled:n=>"no events for "+n+"s — run interrupted?",
   skipped:"removed from the lineup",
   empty:"no events yet<br>run <b>/dev-team-orchestration:run-visual</b> in the terminal"}
@@ -850,8 +854,64 @@ function hardReset(){
   flashTitle(false);gsap.set($("#gate"),{opacity:0});
 }
 
-/* fecha um passo cujo SubagentStop se perdeu/atrasou (usado pelo sweep do
-   Stop do Leader e pelo reconciliador de inversao de ordem) */
+/* INTERROMPIDO != concluido: passo que perdeu o subagente volta pra FILA.
+   Marcar como done era a raiz do "viewer um passo a frente": o Leader
+   re-despacha o mesmo passo e o binding colava no seguinte. */
+function revertRunning(s){
+  if(s.status!=="running")return;
+  s.status="pending";
+  if(s._sus){clearTimeout(s._sus);s._sus=null;}
+  if(s._pr){s._pr.remove();s._pr=null;}
+  s._start=null;s._tools=0;
+  const n=nodeEl[s.id];
+  if(n){n.classList.remove("active");const tm=n.querySelector(".n-tm");if(tm)tm.textContent="0s";}
+  EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];if(b===s.id&&p)p.classList.remove("lit");});
+  const role=s.owner,tk=toks[role];
+  if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
+    if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
+  if(rowEl[role])rowEl[role].classList.remove("act");
+  if(cur.step&&cur.step.id===s.id)cur.step=null;
+  log("leader",s.id+" — "+t("requeued"));
+}
+
+/* re-dispatch de um passo JA fechado (fechamento indevido no meio da run) */
+function unDone(s){
+  s.status="pending";s._tools=0;s._start=null;s._final=null;
+  const n=nodeEl[s.id];
+  if(n){n.classList.remove("done");
+    const ck=n.querySelector(".n-check");if(ck)gsap.set(ck,{opacity:0,scale:.5});
+    const tm=n.querySelector(".n-tm");if(tm)tm.textContent="0s";}
+  EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];if(a===s.id&&p)p.classList.remove("past");});
+  log("leader",s.id+" — "+t("reopened"));updCnt();
+}
+
+/* BINDING pela descricao do dispatch (nao mais "o proximo pendente"):
+   o Leader escreve "frontend-intern: Task 16 montagem /tarefas" e isso
+   identifica o passo mesmo apos interrupcao/re-despacho */
+function bindStep(role,desc){
+  const cand=steps.filter(q=>!q._dyn&&!q.human&&q.owner===role);
+  if(!cand.length)return null;
+  const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const d=norm(desc);
+  if(d){
+    const nums=d.match(/\d+(?:\.\d+)?/g)||[];
+    const dw=new Set(d.match(/[a-z]{4,}/g)||[]);
+    let best=null,bs=0;
+    cand.forEach(q=>{
+      const tt=norm(q.title)+" "+norm(q.id);
+      let sc=0;
+      nums.forEach(nn=>{if(new RegExp("(^|[^0-9])"+nn.replace(".","\\.")+"([^0-9]|$)").test(tt))sc+=3;});
+      (tt.match(/[a-z]{4,}/g)||[]).forEach(w=>{if(dw.has(w))sc+=1;});
+      if(q.status==="pending")sc+=.5;
+      if(sc>bs){bs=sc;best=q;}
+    });
+    if(best&&bs>=3)return best; /* match forte (numero do passo coincidiu) */
+  }
+  return cand.find(q=>q.status==="pending")||null; /* fallback: a fila */
+}
+
+/* fecha um passo cujo SubagentStop se perdeu/atrasou (usado pelo
+   SessionEnd, pelo watchdog e pelo reconciliador de inversao de ordem) */
 function closeOrphan(s){
   if(s.status!=="running")return;
   s.status="done";
@@ -996,7 +1056,9 @@ function route(e){
       gsap.set(tk.el,{opacity:1});tk.el.classList.add("busy");});
       log(role.replace("-intern",""),t("offPlan"));return;}
     /* ---- LOGICA sincrona: ordem = ordem dos EVENTOS, imune ao lag da animacao ---- */
-    let s=nextPending(role);
+    let s=bindStep(role,lastDispatch[role]);
+    if(s&&(s.status==="done"||s.status==="skipped"))unDone(s); /* re-despacho */
+    if(s&&s.status==="running")s=null;                          /* ja rodando: nao rebinda */
     if(!s)s=addDynStep(role);
     if(!s){log(role.replace("-intern",""),t("offPlan"));return;}
     s.status="running";s._start=e.t||Date.now();
@@ -1170,7 +1232,9 @@ function route(e){
       /* invariante: dispatch e sincrono — se o Leader falou, nenhum subagente
          esta vivo. Passo ainda "running" = stop perdido (interrompido no
          terminal). Fecha os orfaos pra nao prender o personagem na cadeira. */
-      steps.forEach(s=>{if(s.status==="running"&&!s.human)closeOrphan(s);});
+      /* Leader falando => nenhum subagente vivo. Passo ainda running foi
+         INTERROMPIDO (nao concluido): volta pra fila pro re-despacho colar. */
+      steps.forEach(s=>{if(s.status==="running"&&!s.human)revertRunning(s);});
       const pending=steps.some(s=>s.status==="pending"||s.status==="running");
       const waiting=steps.some(s=>s.status==="waiting");
       if(waiting){leader(t("pausedGate"),true);return;}
