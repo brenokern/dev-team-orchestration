@@ -974,19 +974,20 @@ function applyEvent(e){
 function route(e){
   if(e.t&&e.t>lastEvT)lastEvT=e.t;
   if(e.ev==="plan"){
+    /* SINCRONO, como toda logica: se o buildGraph ficar pra depois (chain),
+       os eventos seguintes do batch rodam sobre steps=[] e viram no-op —
+       era o F5 zerando a run inteira */
     const replan=!!plan;
     plan=e.plan;
-    chain("main",()=>{
-      if(replan){ /* Leader republicou (ajustes do gate 0.5): reconstroi TUDO
-                     do zero e reaplica os eventos ja vistos sobre o grafo novo */
-        hardReset();
-        buildGraph();
-        log("leader",LANG==="pt"?"plan-graph atualizado — reconstruindo":"plan-graph updated — rebuilding");
-        const prev=liveMode;liveMode=false;
-        EV_LOG.forEach(ev=>route(ev));
-        chain("main",()=>{liveMode=prev;fit();});
-      }else buildGraph();
-    });return;}
+    if(replan){ /* Leader republicou: reconstroi e reaplica o historico */
+      hardReset();
+      buildGraph();
+      log("leader",LANG==="pt"?"plan-graph atualizado — reconstruindo":"plan-graph updated — rebuilding");
+      const prev=liveMode;liveMode=false;
+      EV_LOG.forEach(ev=>route(ev));
+      liveMode=prev;fit();
+    }else buildGraph();
+    return;}
   if(!plan)return; /* eventos antes do plano: so log do leader */
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
