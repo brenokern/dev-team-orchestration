@@ -653,6 +653,21 @@ function log(who,what,cls){
   stream.scrollTop=stream.scrollHeight;$("#ec").textContent=++evN;
 }
 const leader=(t,scan)=>{$("#lm").textContent=t;$("#lc").classList.toggle("scan",!!scan);};
+/* banner do gate: estado IDEMPOTENTE. No batch (F5/reconexao) todos os
+   eventos rodam no mesmo tick — dois tweens competindo deixavam o aviso
+   aceso com o gate ja aprovado. */
+function showGate(msg){
+  const gt=$("#gate");$("#gate-s").textContent=msg||"";
+  gsap.killTweensOf(gt);
+  if(liveMode)gsap.to(gt,{opacity:1,y:0,duration:.6,ease:"power4.out"});
+  else gsap.set(gt,{opacity:1,y:0});
+}
+function hideGate(){
+  const gt=$("#gate");
+  gsap.killTweensOf(gt);
+  if(liveMode)gsap.to(gt,{opacity:0,y:-14,duration:.45,ease:"power3.in"});
+  else gsap.set(gt,{opacity:0,y:-14});
+}
 setInterval(()=>{ /* timers dos cards ativos: N ações · Ns */
   steps.forEach(s=>{
     if((s.status==="running"||s.status==="waiting")&&s._start){
@@ -1200,9 +1215,9 @@ function route(e){
         focus(s.x,s.y,.92);
         leader(t("blocked"),true);
         log(t("you"),e.msg||s.title,"hum");
-        const gt=$("#gate");$("#gate-s").textContent=e.msg||s.title;
-        gsap.to(gt,{opacity:1,y:0,duration:.6,ease:"power4.out"});
-        chime();flashTitle(true);
+        showGate(e.msg||s.title);
+        if(liveMode)chime();
+        flashTitle(true);
       }else{
         s.status="done";
         n.classList.remove("active");n.classList.add("done");
@@ -1214,16 +1229,14 @@ function route(e){
         updCnt();
         lastDone=s;
         sparkFrom(s.id,true);
-        cur.gate=null;flashTitle(false);
-        gsap.to($("#gate"),{opacity:0,y:-14,duration:.45,ease:"power3.in"});
+        cur.gate=null;flashTitle(false);hideGate();
         log(t("you"),t("approved"),"hum");
         leader(t("consolidating"),false);
       }
     }return;}
   if(e.ev==="SessionEnd"){ /* fim oficial da sessao: fecha a cena com honestidade */
     steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
-    cur.done=true;cur.gate=null;flashTitle(false);
-    gsap.to($("#gate"),{opacity:0,y:-14,duration:.45});
+    cur.done=true;cur.gate=null;flashTitle(false);hideGate();
     leader(t("ended"),false);log("leader",t("ended"));
     const st=$("#status");st.className="status dead";$("#status-t").textContent=t("ended");
     return;}
