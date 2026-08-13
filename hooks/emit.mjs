@@ -21,10 +21,19 @@ import { spawn } from "node:child_process";
 
 const DIR = path.join(os.homedir(), ".claude", "team-view");
 const LATEST = path.join(DIR, "latest");
+/* ponteiro POR PROJETO (cwd): 4 runs simultaneas em 4 branches/worktrees nao
+   se contaminam — cada Leader/viewer resolve a sessao do SEU diretorio */
+const cwdKey = c => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h.toString(36); };
+const LATEST_OF = c => path.join(DIR, "latest-" + cwdKey(c));
 
 const ensure = () => { try { fs.mkdirSync(DIR, { recursive: true }); } catch {} };
-const readLatest = () => { try { return fs.readFileSync(LATEST, "utf8").trim() || null; } catch { return null; } };
-const setLatest = s => { try { ensure(); fs.writeFileSync(LATEST, s); } catch {} };
+const readLatest = () => {
+  try { const s = fs.readFileSync(LATEST_OF(process.cwd()), "utf8").trim(); if (s) return s; } catch {}
+  try { return fs.readFileSync(LATEST, "utf8").trim() || null; } catch { return null; }
+};
+const setLatest = (s, cwd) => {
+  try { ensure(); fs.writeFileSync(LATEST, s); if (cwd) fs.writeFileSync(LATEST_OF(cwd), s); } catch {}
+};
 const append = (session, obj) => {
   try { ensure(); fs.appendFileSync(path.join(DIR, session + ".ndjson"), JSON.stringify(obj) + "\n"); } catch {}
 };
@@ -69,7 +78,7 @@ async function hookMode() {
   } catch {}
   let p; try { p = JSON.parse(raw); } catch { return; }
   const session = p.session_id; if (!session) return;
-  setLatest(session);
+  setLatest(session, p.cwd);
   const e = { t: Date.now(), ev: p.hook_event_name };
   if (p.agent_type) e.agent = p.agent_type;
   if (p.agent_id) e.aid = p.agent_id;

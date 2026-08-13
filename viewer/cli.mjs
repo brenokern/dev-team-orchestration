@@ -17,6 +17,14 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(os.homedir(), ".claude", "team-view");
+/* ponteiro por projeto (mesma hash do emit.mjs): o viewer lancado de dentro
+   de um repo/worktree segue a run DAQUELE diretorio, nao a mais nova global —
+   4 viewers de 4 branches convivem sem roubar a sessao um do outro */
+const cwdKey = c => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h.toString(36); };
+const readPointer = () => {
+  try { const s = fs.readFileSync(path.join(DIR, "latest-" + cwdKey(process.cwd())), "utf8").trim(); if (s) return s; } catch {}
+  try { return fs.readFileSync(path.join(DIR, "latest"), "utf8").trim() || null; } catch { return null; }
+};
 
 const args = process.argv.slice(2);
 const opt = (name, def) => {
@@ -34,9 +42,7 @@ const SPEED = num(opt("speed", "6"), 6); /* 6x o tempo real: assistivel; suba p/
 function resolveFile() {
   if (REPLAY) return { file: path.resolve(String(REPLAY)), mode: "replay" };
   let session = opt("session", null);
-  if (!session) {
-    try { session = fs.readFileSync(path.join(DIR, "latest"), "utf8").trim(); } catch {}
-  }
+  if (!session || session === true) session = readPointer();
   if (!session) {
     console.error("team-view: nenhuma sessao encontrada em " + DIR + " (rode o time primeiro, ou use --replay <arquivo>)");
     /* ainda sobe o server: a pagina mostra 'aguardando sessao' e conecta quando o arquivo nascer */
@@ -91,13 +97,11 @@ function startTail() {
     /* sessao nova nasceu depois do viewer subir (fluxo run-visual: viewer
        antes do passo 0): re-aponta em vez de ficar preso na run antiga */
     if (!PINNED) {
-      try {
-        const latest = fs.readFileSync(path.join(DIR, "latest"), "utf8").trim();
-        if (latest && latest !== src.session) {
-          src.session = latest; src.file = path.join(DIR, latest + ".ndjson"); offset = 0;
-          broadcast({ type: "hello", mode: "live", session: latest });
-        }
-      } catch {}
+      const latest = readPointer();
+      if (latest && latest !== src.session) {
+        src.session = latest; src.file = path.join(DIR, latest + ".ndjson"); offset = 0;
+        broadcast({ type: "hello", mode: "live", session: latest });
+      }
     }
     let st; try { st = fs.statSync(src.file); } catch { return; }
     if (st.size < offset) offset = 0; /* arquivo truncado/rotacionado */
@@ -116,11 +120,9 @@ function startTail() {
   try { offset = fs.statSync(src.file).size; } catch { offset = 0; }
   setInterval(tick, 300);
 }
-function retarget() { /* sessao ainda nao existe: adota a mais nova quando aparecer */
-  try {
-    const latest = fs.readFileSync(path.join(DIR, "latest"), "utf8").trim();
-    if (latest) { src.file = path.join(DIR, latest + ".ndjson"); src.session = latest; offset = 0; broadcast({ type: "hello", mode: "live", session: latest }); }
-  } catch {}
+function retarget() { /* sessao ainda nao existe: adota a do projeto quando nascer */
+  const latest = readPointer();
+  if (latest) { src.file = path.join(DIR, latest + ".ndjson"); src.session = latest; offset = 0; broadcast({ type: "hello", mode: "live", session: latest }); }
 }
 
 /* ------- http ------- */
