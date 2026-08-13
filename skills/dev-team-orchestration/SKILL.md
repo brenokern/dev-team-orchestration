@@ -244,7 +244,13 @@ visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (na
 4. **Gates humanos**: ao chegar num step `human:true`, rode
    `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" gate <id> waiting "<o que fazer>"` ANTES de
    parar e perguntar no terminal (acende o card âmbar + notificação nativa do SO). Quando o
-   usuário resolver: `... gate <id> approved`.
+   usuário resolver: `... gate <id> approved` — **SEMPRE emita o `approved` antes do próximo
+   dispatch**; sem ele o aviso âmbar fica aceso no viewer (o viewer se auto-cura no próximo
+   dispatch, mas o `approved` é o sinal correto).
+   **Aprovação IMPREVISTA no meio da run** (um sub-passo que surgiu e precisa de validação
+   humana): NÃO re-emita o plan. Emita `gate <id-novo> waiting "<o que aprovar>"` com um id
+   NOVO (ex.: `hx1`) — o viewer cria o card humano em runtime, pendurado no passo atual do
+   fluxo, como um novo ponto de partida. Ao resolver: `gate <id-novo> approved`.
 
 5. **Vereditos no viewer**: nos MARCOS da run — fim de cada camada (veredito do reviewer),
    QA, UX, revisão final e encerramento — emita um resumo de 1-2 linhas (≤300 caracteres, o

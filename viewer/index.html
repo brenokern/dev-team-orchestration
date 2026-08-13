@@ -43,8 +43,17 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 [data-theme="light"] .grain{opacity:.018}
 .app{position:relative;z-index:1;height:100vh;display:grid;
-  grid-template-columns:250px minmax(0,1fr) 328px;gap:13px;padding:13px}
-.shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:26px;padding:6px;min-height:0}
+  --colL:250px;--colR:328px;
+  grid-template-columns:var(--colL) minmax(0,1fr) var(--colR);gap:13px;padding:13px;
+  transition:grid-template-columns .5s var(--ease)}
+.app.no-l{--colL:0px}
+.app.no-r{--colR:0px}
+.shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:26px;padding:6px;min-height:0;
+  min-width:0;overflow:hidden;transition:opacity .4s var(--ease),padding .5s var(--ease),border-color .5s var(--ease)}
+.app.no-l .shell.side-l,.app.no-r .shell.side-r{opacity:0;padding:0;border-color:transparent;pointer-events:none}
+/* telas menores: menos respiro; colunas começam colapsadas via JS */
+@media (max-width:1180px){.app{gap:9px;padding:9px;--colL:224px;--colR:280px}}
+@media (max-width:760px){.app{gap:7px;padding:7px}}
 .core{background:var(--core);border-radius:20px;height:100%;overflow:hidden;
   display:flex;flex-direction:column;min-height:0}
 .ph{padding:15px 17px 11px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto}
@@ -273,8 +282,8 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 <div class="mesh"><div class="orb a"></div><div class="orb b"></div></div>
 <div class="grain"></div>
 
-<div class="app">
-  <div class="shell"><div class="core">
+<div class="app" id="app">
+  <div class="shell side-l"><div class="core">
     <div class="ph"><h2 id="h-team">time</h2><span class="count" id="cnt">—</span></div>
     <div class="lead"><div class="lead-c" id="lc">
       <div class="lead-t"><span class="ldot" id="ldot"></span><span class="lead-n">team-leader</span></div>
@@ -285,11 +294,13 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 
   <div class="shell"><div class="core">
     <div class="strip">
+      <div class="chip btn ok" id="c-panl" title="mostrar/ocultar coluna do time">&#9703;</div>
       <div class="chip" id="c-session"><span class="d"></span>sessão <b>—</b></div>
       <span class="grow"></span>
       <div class="chip btn ok" id="c-snd">som <b>on</b></div>
       <div class="chip btn" id="c-theme">tema <b>dark</b></div>
       <div class="chip btn" id="c-lang">PT-BR</div>
+      <div class="chip btn ok" id="c-panr" title="mostrar/ocultar coluna de atividade">&#9707;</div>
     </div>
     <div class="stagewrap" id="wrap">
       <div class="stage" id="stage"><svg class="edges" id="edges"></svg></div>
@@ -312,7 +323,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
     </div>
   </div></div>
 
-  <div class="shell"><div class="core">
+  <div class="shell side-r"><div class="core">
     <div class="ph"><h2 id="h-act">atividade</h2><span class="count" id="ec">0</span></div>
     <div class="stream" id="stream"><div class="empty" id="empty">nenhum evento ainda<br>
       rode <b>/dev-team-orchestration:run-visual</b> no terminal</div></div>
@@ -580,7 +591,41 @@ wrap.addEventListener("pointerup",e=>{ /* clique (sem arrasto) num card com vere
   }
 });
 addEventListener("pointerup",()=>{pan=null;wrap.classList.remove("drag");});
-addEventListener("resize",fit);
+/* redimensionar a janela NAO reseta a visao: mantem o zoom e o ponto do
+   fluxo que estava no centro — so compensa o delta do viewport */
+function keepView(){
+  const w=wrap.clientWidth,h=wrap.clientHeight;
+  const last=keepView._last;
+  keepView._last={w,h};
+  if(!last||!last.w||!last.h||!w||!h)return;
+  if(w===last.w&&h===last.h)return;
+  ox+=(w-last.w)/2;oy+=(h-last.h)/2;apply();
+}
+keepView._last={w:wrap.clientWidth,h:wrap.clientHeight};
+addEventListener("resize",keepView);
+
+/* ================= colunas colapsáveis (responsividade) ================= */
+const app=$("#app");
+function setPanel(side,on,save){ /* side: "l"|"r" */
+  app.classList.toggle("no-"+side,!on);
+  const c=$(side==="l"?"#c-panl":"#c-panr");
+  c.classList.toggle("ok",on);c.classList.toggle("off",!on);
+  if(save)try{localStorage.setItem("tv-pan-"+side,on?"1":"0");}catch(e){}
+  /* o palco muda de largura durante a transicao do grid: compensa o delta
+     no fim, mantendo zoom e foco (nada de fit() resetando a visao) */
+  clearTimeout(setPanel._to);setPanel._to=setTimeout(()=>keepView(),540);
+}
+$("#c-panl").onclick=()=>setPanel("l",app.classList.contains("no-l"),true);
+$("#c-panr").onclick=()=>setPanel("r",app.classList.contains("no-r"),true);
+(function initPanels(){
+  const pref=s=>{try{return localStorage.getItem("tv-pan-"+s);}catch(e){return null;}};
+  const small=matchMedia("(max-width:1180px)").matches,
+        tiny=matchMedia("(max-width:760px)").matches;
+  /* preferencia salva vence; sem preferencia: tela pequena abre com o fluxo em foco */
+  const l=pref("l"),r=pref("r");
+  setPanel("l",l!=null?l==="1":!small,false);
+  setPanel("r",r!=null?r==="1":!tiny,false);
+})();
 
 /* ================= chips / audio / title flash ================= */
 $("#c-snd").onclick=()=>{snd=!snd;const c=$("#c-snd");c.classList.toggle("ok",snd);
@@ -985,6 +1030,58 @@ function addDynStep(role){
   return st;
 }
 
+/* gate DINAMICO: aprovacao humana que surge NO MEIO da run, sem estar no
+   plan-graph. Antes era descartada em silencio — e a alternativa do Leader
+   (re-emitir o plan) zerava o palco inteiro ("o fluxo volta ao inicio").
+   Agora o gate vira um card humano REAL, pendurado no ponto atual do fluxo:
+   um novo ponto de partida, append-only, sem reconstruir nada. */
+function addGateStep(id,msg){
+  if(!plan||!steps.length)return null;
+  const parent=cur.step||lastDone||steps[steps.length-1];
+  const c=(parent._c||0)+1;
+  let y=parent.y;
+  while(steps.some(q=>q!==parent&&q._c===c&&Math.abs(q.y-y)<ROWGAP/2))y+=ROWGAP;
+  const st={id,title:String(msg||id).slice(0,120),layer:"humano",owner:"humano",
+    human:true,deps:[parent.id],status:"pending",_c:c,_dyng:true,x:X0+c*COLW,y};
+  steps.push(st);stepsById[id]=st;
+  spawnCard(st,parent);
+  return st;
+}
+/* materializa um card criado em runtime (fora do buildGraph) + aresta dyn */
+function spawnCard(s,parent){
+  const n=document.createElement("div");n.className="node dync"+(s.human?" humc":"");
+  n.style.left=s.x+"px";n.style.top=s.y+"px";
+  n.innerHTML=`<div class="n-shell"><div class="n-core">
+    <div class="n-lay">${s.layer||""} <span class="n-subs"></span></div>
+    <div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
+    <div class="n-f"><span class="n-tm">0s</span></div>
+    <div class="n-check">&#10003;</div></div></div>
+    <span class="p-in"></span>`;
+  stage.appendChild(n);nodeEl[s.id]=n;
+  n.querySelector(".n-core").style.height=CORE_H+"px";
+  gsap.set(n,{x:-88,y:-CARD_H/2,opacity:1});
+  if(liveMode)gsap.from(n,{opacity:0,scale:.86,filter:"blur(8px)",duration:.8,ease:"power4.out"});
+  if(parent){
+    const pn=nodeEl[parent.id];
+    if(pn&&!pn.querySelector(".p-out")){
+      const sp=document.createElement("span");sp.className="p-out";pn.appendChild(sp);}
+    const x1=parent.x+93,x2=s.x-93,y1=parent.y,y2=s.y;
+    const dx=Math.max(26,Math.min(72,(x2-x1)*.45));
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d",`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`);
+    p.classList.add("dyn");
+    edgesSvg.appendChild(p);pathEl[parent.id+">"+s.id]=p;
+    EDGES.push([parent.id,s.id]);
+  }
+  /* estica o palco se o card novo passou da borda */
+  let grew=false;
+  if(s.x+300>SW){SW=s.x+300;grew=true;}
+  if(s.y+CARD_H+170>SH){SH=Math.max(SH,s.y+CARD_H+170);grew=true;}
+  FLOWY.min=Math.min(FLOWY.min,s.y);FLOWY.max=Math.max(FLOWY.max,s.y);
+  if(grew){stage.style.width=SW+"px";stage.style.height=SH+"px";
+    edgesSvg.setAttribute("width",SW);edgesSvg.setAttribute("height",SH);}
+}
+
 /* badge de subprocessos no card de origem */
 function renderSubs(parent){
   const n=nodeEl[parent.id];if(!n)return;
@@ -1040,6 +1137,30 @@ function think(role,text){
 }
 
 
+/* AUTO-CURA do gate: se a run visivelmente ANDOU (novo dispatch/subagente)
+   com um gate ainda "waiting", o humano ja resolveu no terminal e o Leader
+   esqueceu (ou errou o id) do `gate approved`. Fecha o gate sozinho em vez
+   de deixar o aviso ambar aceso para sempre com o fluxo parado. */
+function resolveWaitingGates(){
+  let any=false;
+  steps.forEach(s=>{
+    if(s.status!=="waiting")return;
+    any=true;
+    s.status="done";
+    const n=nodeEl[s.id];
+    if(n){n.classList.remove("active");n.classList.add("done");
+      if(s._start)n.querySelector(".n-tm").textContent=
+        (Math.max(0,nowT()-s._start)/1000).toFixed(0)+"s";
+      gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
+    EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
+      if(b===s.id&&p){p.classList.remove("lit");p.classList.add("past");}});
+    sparkFrom(s.id,false);
+    lastDone=s;
+    log(t("you"),t("approved"),"hum");
+  });
+  if(any){cur.gate=null;flashTitle(false);hideGate();updCnt();}
+}
+
 function applyEvent(e){
   if(e.agent)e.agent=norm(e.agent);
   if(e.sub)e.sub=norm(e.sub);
@@ -1067,9 +1188,7 @@ function route(e){
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
     const aid=e.aid||role+"#"+Date.now();
-    if(!plan){chain(role,async()=>{const tk=toks[role]||mkTok(role,LOUNGE.couch.x+60,LOUNGE._seatY,"ok");
-      gsap.set(tk.el,{opacity:1});tk.el.classList.add("busy");});
-      log(role.replace("-intern",""),t("offPlan"));return;}
+    resolveWaitingGates(); /* time voltou a trabalhar => gate foi resolvido no terminal */
     /* ---- LOGICA sincrona: ordem = ordem dos EVENTOS, imune ao lag da animacao ---- */
     let s=bindStep(role,lastDispatch[role]);
     if(s&&(s.status==="done"||s.status==="skipped"))unDone(s); /* re-despacho */
@@ -1116,6 +1235,7 @@ function route(e){
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) — rota REAL dos dispatches do Leader */
     if(e.tool==="Task"||e.tool==="Agent"){
+      resolveWaitingGates(); /* leader despachando => gate ja foi resolvido */
       if(e.sub)lastDispatch[e.sub]=String(e.info||"").replace(/^[a-z-]+\s*:\s*/i,"");
       log("leader",t("dispatched")+(e.info||e.sub||""));}
     return;}
@@ -1205,7 +1325,16 @@ function route(e){
     }return;}
   if(e.ev==="gate"){
     {
-      const s=stepsById[e.id];if(!s)return;
+      let s=stepsById[e.id];
+      if(!s){ /* gate fora do plan-graph: cria o card em runtime (append-only) */
+        if(e.status!=="waiting")return;
+        s=addGateStep(e.id,e.msg);
+        if(!s){ /* sem plano ainda: pelo menos avisa — nunca descarta em silencio */
+          showGate(e.msg||e.id);log(t("you"),e.msg||e.id,"hum");
+          if(liveMode)chime();flashTitle(true);return;}
+        log("leader",(LANG==="pt"?"novo gate em runtime — ":"new runtime gate — ")+e.id);
+        updCnt();
+      }
       const n=nodeEl[s.id];
       if(e.status==="waiting"){
         s.status="waiting";s._start=e.t||Date.now();

@@ -23,10 +23,13 @@ const opt = (name, def) => {
   const i = args.indexOf("--" + name);
   return i >= 0 ? (args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : true) : def;
 };
-const PORT = parseInt(opt("port", "4517"), 10);
+/* flag sem valor ("--port --open") viraria NaN e mataria o server: cai no default */
+const num = (v, def) => { const n = parseFloat(v); return Number.isFinite(n) ? n : def; };
+const PORT = num(opt("port", "4517"), 4517);
 const OPEN = args.includes("--open");
+const PINNED = args.includes("--session"); /* sessao fixada a mao: nao re-aponta */
 const REPLAY = opt("replay", null);
-const SPEED = parseFloat(opt("speed", "6")); /* 6x o tempo real: assistivel; suba p/ resumo */
+const SPEED = num(opt("speed", "6"), 6); /* 6x o tempo real: assistivel; suba p/ resumo */
 
 function resolveFile() {
   if (REPLAY) return { file: path.resolve(String(REPLAY)), mode: "replay" };
@@ -85,6 +88,17 @@ function startTail() {
   if (src.mode !== "live") return;
   const tick = () => {
     if (!src.file) { retarget(); return; }
+    /* sessao nova nasceu depois do viewer subir (fluxo run-visual: viewer
+       antes do passo 0): re-aponta em vez de ficar preso na run antiga */
+    if (!PINNED) {
+      try {
+        const latest = fs.readFileSync(path.join(DIR, "latest"), "utf8").trim();
+        if (latest && latest !== src.session) {
+          src.session = latest; src.file = path.join(DIR, latest + ".ndjson"); offset = 0;
+          broadcast({ type: "hello", mode: "live", session: latest });
+        }
+      } catch {}
+    }
     let st; try { st = fs.statSync(src.file); } catch { return; }
     if (st.size < offset) offset = 0; /* arquivo truncado/rotacionado */
     if (st.size > offset) {
