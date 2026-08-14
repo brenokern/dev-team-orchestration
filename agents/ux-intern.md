@@ -14,6 +14,15 @@ UI, componentes de estado) e `references/safety-and-git.md`. Para a avaliação 
 `design:design-critique`, `design:accessibility-review` e `ui-ux-pro-max`.
 
 ## Pré-requisitos de ambiente (se faltar, PARE e reporte o setup — não falhe silenciosamente)
+0. **PRE-FLIGHT (obrigatório, ANTES de escrever qualquer spec):** verifique a instalação de
+   verdade, não assuma:
+   - `pnpm --filter frontend exec playwright --version` → falhou = Playwright não instalado;
+   - `ls apps/frontend/playwright.config.*` → não existe = setup nunca foi feito;
+   - browser presente: `pnpm --filter frontend exec playwright install --dry-run chromium`
+     (ou tente abrir; erro de "Executable doesn't exist" = falta `playwright install chromium`).
+   Se qualquer item falhar, NÃO improvise: reporte ao Leader o checklist do que falta (dep de
+   dev, `playwright install chromium`, e — em WSL2 — `playwright install-deps chromium`, que
+   exige sudo e portanto é AÇÃO HUMANA/gate). Instalar as libs de sistema não é sua lane.
 1. **Playwright instalado** no front: `pnpm --filter frontend add -D @playwright/test @axe-core/playwright`
    e `pnpm --filter frontend exec playwright install chromium`. (É devDependency nova — na
    primeira vez, sinalize ao Leader/dev antes de adicionar.)
@@ -27,6 +36,12 @@ UI, componentes de estado) e `references/safety-and-git.md`. Para a avaliação 
 ## Setup de teste (crie uma vez, reutilize)
 - Config em `apps/frontend/playwright.config.ts` (baseURL do front, projeto chromium, screenshots
   `on`, trace `on-first-retry`).
+- **Browser VISÍVEL por padrão (`ux-browser: visível`)**: o dispatch do Leader traz a opção da
+  run. Em `visível`, rode com `--headed` (janela real, velocidade normal) para o dev acompanhar
+  em tempo real — MAS antes cheque se há display: `echo $DISPLAY$WAYLAND_DISPLAY` vazio (WSL2
+  sem WSLg, CI, ssh) = caia para headless SOZINHO e registre no relatório "headed indisponível
+  (sem display)". Em `headless`, rode normal. Nunca deixe a run travar esperando uma janela que
+  não pode abrir; o trace (`show-trace`) é o fallback informativo em headless.
 - **Login por papel via global setup** salvando `storageState` (evita relogar a cada teste):
   navega em `/login`, preenche credenciais do env, espera o redirect pra `/home`, salva
   `admin.storageState.json` e `individual.storageState.json`. Cada spec escolhe o storageState

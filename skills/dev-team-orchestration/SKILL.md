@@ -88,8 +88,10 @@ terminal). Marque `in_progress`/`completed` a cada passo — é o que o usuário
 Antes de despachar qualquer passo, apresente a escalação que você montou, num bloco único e
 compacto — um passo por linha (`s3 · backend · backend-intern — service + controller`), os
 gates humanos previstos (migration/infra/PR), os estágios opcionais com o default marcado
-(revisão por camada [on] · QA [enxuto] · UX [enxuto|completo|off] · limpeza [on]) e o que as
-observações da run já alteraram. Faça **UMA pergunta**: "Aprovo essa escalação ou ajusta algo?"
+(revisão por camada [on] · QA [enxuto] · UX [enxuto|completo|off] ·
+**ux-browser [visível|headless]** — default **visível**: o ux-intern roda o Playwright com
+`--headed` pro dev assistir o browser em tempo real; "headless" desliga · limpeza [on]) e o que
+as observações da run já alteraram. Faça **UMA pergunta**: "Aprovo essa escalação ou ajusta algo?"
 e ESPERE.
 - Ajustes ("tira s7", "UX completo", "sem revisão por camada") são aplicados SEM nova rodada —
   reapresente só as linhas alteradas e siga.
@@ -173,9 +175,18 @@ o problema é do dono do passo, não dele. Falhou → volta pro dono do passo cu
 do log; re-QA depois do fix.
 
 ### N+2. UI/UX (só se a feature tem frontend; MODO ENXUTO por padrão)
+**Pre-flight ANTES do dispatch (barato, evita run perdida):** rode
+`pnpm --filter frontend exec playwright --version` e cheque se existe
+`apps/frontend/playwright.config.*`. Faltando qualquer um, PARE e apresente ao dev o setup
+pendente (devDependency `@playwright/test` + `@axe-core/playwright`,
+`playwright install chromium` e, em WSL2, `playwright install-deps chromium` com sudo — ação
+humana) em vez de despachar o ux-intern para falhar. Branch onde o dev já instalou passa direto.
 Despache `ux-intern` (opus): sobe o front e usa **Playwright** num ÚNICO spec com os fluxos DA
 FEATURE como **ADMIN e como INDIVIDUAL** (caminho feliz + isolamento), valida o gating de UI do
-plano e roda axe só nas páginas novas/alteradas (serious/critical). 1 screenshot por papel + 1
+plano e roda axe só nas páginas novas/alteradas (serious/critical). **Passe a opção
+`ux-browser` da escalação no prompt do dispatch** (default `visível` = `--headed`, o dev
+assiste o browser ao vivo; `headless` quando o usuário desligar na aprovação — o ux-intern cai
+para headless sozinho se não houver display). 1 screenshot por papel + 1
 por falha; ~12 tool calls. Estados de loading/vazio/erro e o UX heurístico
 (design-critique/ui-ux-pro-max) são o **modo completo** — só quando VOCÊ pedir "UX completo" no
 dispatch. Achados de bug/UX → voltam pro `frontend-intern`; a11y séria idem. Pré-requisitos de
