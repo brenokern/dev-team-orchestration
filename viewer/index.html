@@ -389,6 +389,7 @@ const STR={
   interrupted:"encerrado sem stop (interrompido no terminal)",
   ended:"sessão encerrada no terminal",
   requeued:"interrompido — de volta para a fila",
+  inferredDone:"concluído (inferido — o passo seguinte do papel começou)",
   reopened:"re-despachado — reaberto",
   stalled:n=>"sem eventos há "+n+"s — run interrompida?",
   skipped:"removido na escalação",
@@ -417,6 +418,7 @@ const STR={
   interrupted:"closed without stop (interrupted in the terminal)",
   ended:"session ended in the terminal",
   requeued:"interrupted — back in the queue",
+  inferredDone:"done (inferred — the role's next step started)",
   reopened:"re-dispatched — reopened",
   stalled:n=>"no events for "+n+"s — run interrupted?",
   skipped:"removed from the lineup",
@@ -1005,9 +1007,12 @@ function bindStep(role,desc){
 }
 
 /* fecha um passo cujo SubagentStop se perdeu/atrasou (usado pelo
-   SessionEnd, pelo watchdog e pelo reconciliador de inversao de ordem) */
-function closeOrphan(s){
-  if(s.status!=="running")return;
+   SessionEnd, pelo watchdog, pelo reconciliador de inversao de ordem e
+   pelo fechamento por inferencia). Aceita pending: um passo que o Stop
+   devolveu pra fila tambem pode ser fechado por inferencia. */
+function closeOrphan(s,msgKey){
+  if(s.status!=="running"&&s.status!=="pending")return;
+  const wasRunning=s.status==="running";
   s.status="done";
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
@@ -1022,7 +1027,7 @@ function closeOrphan(s){
   lastDone=s;
   if(s._dyn){const par=stepsById[s.parentId];if(par)renderSubs(par);}
   sparkFrom(s.id,false); /* orfao: verde sem fagulha (nao houve conclusao limpa) */
-  log("leader",s.id+" — "+t("interrupted"));
+  log("leader",s.id+" — "+t(msgKey||(wasRunning?"interrupted":"inferredDone")));
   const role=s.owner,tk=toks[role];
   if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
     if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
@@ -1229,10 +1234,20 @@ function route(e){
     if(s&&s.status==="running")s=null;                          /* ja rodando: nao rebinda */
     if(!s)s=addDynStep(role);
     if(!s){log(role.replace("-intern",""),t("offPlan"));return;}
+    /* FECHAMENTO POR INFERENCIA: um papel e UMA pessoa e roda em ordem.
+       Se este passo comecou, todo passo ANTERIOR do mesmo papel que ficou
+       aberto (stop perdido, ou devolvido pra fila pelo Stop do terminal)
+       TERMINOU — fecha na hora, sem watchdog. E o que fazia a Task N
+       concluida nunca ganhar o check no viewer. */
+    const si=steps.indexOf(s);
+    steps.forEach((q,qi)=>{
+      if(q===s||q.human||q._dyn||q.owner!==role||qi>=si)return;
+      if(q.status==="running"||q.status==="pending")closeOrphan(q,"inferredDone");
+    });
     s.status="running";s._start=e.t||Date.now();
     aidStep[aid]=s;
     const other=steps.find(q=>!q.human&&q.owner===role&&q.status==="running"&&q!==s);
-    if(other)armSuspect(other,role); /* irmao sem stop: paralelo real ou stop perdido */
+    if(other)armSuspect(other,role); /* irmao sem stop ADIANTE: paralelo real ou stop perdido */
     const nd=nodeEl[s.id];if(nd)nd.classList.add("active");
     if(s._dyn){const par=stepsById[s.parentId];if(par&&nodeEl[par.id])nodeEl[par.id].classList.add("active");}
     if(rowEl[role]){rowEl[role].classList.add("act");rowEl[role].querySelector(".rs").textContent=t("active");}
