@@ -60,6 +60,19 @@ function toast(title, msg) {
   } catch {}
 }
 
+/* rotacao: logs de team-view com mais de 30 dias sao removidos quando uma
+   run nova publica o plan (ndjson, meta e ponteiros latest-* orfaos) */
+function gc() {
+  try {
+    const cutoff = Date.now() - 30 * 24 * 3600e3;
+    for (const f of fs.readdirSync(DIR)) {
+      if (f === "latest") continue;
+      const full = path.join(DIR, f);
+      try { if (fs.statSync(full).mtimeMs < cutoff) fs.unlinkSync(full); } catch {}
+    }
+  } catch {}
+}
+
 function summarize(input) {
   if (!input || typeof input !== "object") return "";
   const s = input.file_path || input.command || input.description || input.prompt || input.pattern || "";
@@ -79,6 +92,11 @@ async function hookMode() {
   let p; try { p = JSON.parse(raw); } catch { return; }
   const session = p.session_id; if (!session) return;
   setLatest(session, p.cwd);
+  /* ponteiro pro transcript JSONL: e a fonte da verdade que o cli.mjs usa
+     na reconciliacao (fecha passos mesmo com SubagentStop perdido) */
+  if (p.transcript_path) {
+    try { fs.writeFileSync(path.join(DIR, session + ".meta"), JSON.stringify({ transcript: p.transcript_path, cwd: p.cwd || null })); } catch {}
+  }
   const e = { t: Date.now(), ev: p.hook_event_name };
   if (p.agent_type) e.agent = p.agent_type;
   if (p.agent_id) e.aid = p.agent_id;
@@ -133,6 +151,11 @@ function cliMode(argv) {
       const plan = JSON.parse(fs.readFileSync(argv[1], "utf8"));
       append(session, { t: Date.now(), ev: "plan", plan });
     } catch {}
+    gc(); /* run nova comecando: hora de limpar logs antigos */
+  } else if (argv[0] === "commit") {
+    /* commit do passo (diff clicavel no viewer): emit.mjs commit <stepId> <hash> */
+    const [, id, hash] = argv;
+    if (id && /^[0-9a-f]{7,40}$/i.test(hash || "")) append(session, { t: Date.now(), ev: "commitref", id, hash });
   } else if (argv[0] === "gate") {
     const [, id, status, ...rest] = argv;
     const msg = rest.join(" ");

@@ -63,6 +63,11 @@ plan-graph + gates humanos dinâmicos + replay num plugin de Claude Code — o d
 
 ## 4. O que falta — roadmap priorizado
 
+> **Status 2026-08-25: itens 1–8 implementados** (recon via transcript, Last-Event-ID,
+> Σ tokens da run, histórico `/runs`, scrubber de replay, gantt com wait-time, diff por passo
+> via `emit.mjs commit` + `/show/<hash>`, GC de 30 dias), além do `model:` no frontmatter dos
+> 9 agentes. Mantido abaixo como registro da priorização.
+
 1. **Snapshot/reconciliação via transcript JSONL** (item 2.2 acima) — elimina de vez a classe
    de bug "card não conclui". Esforço médio, maior retorno.
 2. **`id:` nos eventos SSE + `Last-Event-ID`** — reconexão do EventSource retoma de onde

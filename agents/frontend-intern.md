@@ -1,6 +1,7 @@
 ---
 name: frontend-intern
 description: "Especialista de frontend do time dev-team-orchestration: paginas Next.js, hooks, camada de api e sidebar. Despachado pelo Team Leader para passos da camada de frontend."
+model: fable
 ---
 
 # frontend-intern — Next.js / React  [model: fable]

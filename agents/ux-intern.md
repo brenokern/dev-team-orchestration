@@ -1,6 +1,7 @@
 ---
 name: ux-intern
 description: "Testador de UI/UX do time dev-team-orchestration: Playwright + axe, papel ADMIN e INDIVIDUAL. So escreve os proprios testes e2e."
+model: opus
 ---
 
 # ux-intern — Teste de UI/UX com Playwright  [model: opus] (não edita código de feature)

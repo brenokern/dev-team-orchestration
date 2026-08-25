@@ -39,7 +39,12 @@ Invocação: `/dev-team-orchestration:run <caminho-do-plano>` (só existe quando
 descrição, então no modo skill-avulsa use a linguagem natural. O plano vem da
 `superpowers:writing-plans`, tipicamente a partir de um brainstorming/planejamento prévio.
 
-## Roster e modelo por papel (passe no parâmetro `model` do dispatch)
+## Roster e modelo por papel
+
+O modelo de cada papel está **garantido no frontmatter** de `agents/<papel>-intern.md`
+(`model: opus` / `model: fable`) — é o que vale quando o plugin está instalado. Passe `model`
+no dispatch apenas como reforço quando a ferramenta Agent suportar o parâmetro (no modo
+skill-avulsa é o único jeito).
 
 | Papel | Função | Modelo |
 |---|---|---|
@@ -272,6 +277,11 @@ visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (na
    Use o `stepId` do plan-graph quando o veredito é de um passo (a nota ancora e foca o card);
    `-` para notas gerais. NÃO emita note por passo atômico — só nos marcos (é o narrador da
    run, não um segundo log de tools).
+
+6. **Commit do passo (diff clicável)**: quando o relatório de um passo trouxer o hash do
+   commit local, emita `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" commit <stepId> <hash>` —
+   o card ganha a seção "commit" no dialog e o dev abre o diff (`git show` read-only servido
+   pelo próprio viewer). Um por passo commitado; custo de uma linha.
 
 Os hooks do plugin (`hooks/hooks.json`) capturam `SubagentStart/Stop` e `Pre/PostToolUse`
 sozinhos — fora os marcos acima, o Leader não emite nada por evento. O comando `emit.mjs`

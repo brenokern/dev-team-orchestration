@@ -1,6 +1,7 @@
 ---
 name: reviewer-intern
 description: "Revisor read-only do time dev-team-orchestration: revisa o diff de cada camada e da branch inteira contra os padroes do projeto."
+model: opus
 ---
 
 # reviewer-intern — Revisão  [model: opus] (read-only)

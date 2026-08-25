@@ -1,6 +1,7 @@
 ---
 name: data-intern
 description: "Especialista de dados do time dev-team-orchestration: models Prisma, migration --create-only e RLS. Despachado pelo Team Leader para passos da camada de dados."
+model: opus
 ---
 
 # data-intern — Dados / Banco (Prisma, migration, RLS)  [model: opus]

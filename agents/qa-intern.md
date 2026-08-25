@@ -1,6 +1,7 @@
 ---
 name: qa-intern
 description: "QA read-only do time dev-team-orchestration: roda lint, testes e build e reporta. Nunca edita codigo."
+model: opus
 ---
 
 # qa-intern — Testes e validação  [model: opus] (read-only)

@@ -290,6 +290,53 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .ev.note .what{color:var(--txt)}
 .empty{flex:1;display:grid;place-items:center;color:var(--faint);
   font-family:"Geist Mono",monospace;font-size:11px;text-align:center;line-height:2}
+/* ---- scrubber do replay (o cliente controla o tempo) ---- */
+.scrub{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:21;
+  display:none;align-items:center;gap:10px;background:var(--core-2);
+  border:1px solid var(--hair);border-radius:999px;padding:8px 14px;
+  width:min(520px,calc(100% - 340px))}
+.scrub.on{display:flex}
+.scrub button{font-family:"Geist Mono",monospace;font-size:10px;color:var(--txt);
+  background:var(--hair-soft);border:1px solid var(--hair);border-radius:9px;
+  height:26px;min-width:30px;padding:0 8px;cursor:pointer}
+.scrub button:hover{background:var(--hair)}
+.scrub input[type=range]{flex:1;accent-color:var(--live);height:3px;cursor:pointer}
+.scrub .sc-i{font-family:"Geist Mono",monospace;font-size:9px;color:var(--dim);
+  min-width:64px;text-align:right;white-space:nowrap}
+/* ---- lista de runs (historico) ---- */
+.runrow{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;
+  cursor:pointer;border:1px solid transparent}
+.runrow:hover{background:var(--shell);border-color:var(--hair-soft)}
+.runrow .rr-t{flex:1;min-width:0}
+.runrow .rr-n{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runrow .rr-m{font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint);margin-top:2px}
+.runrow .rr-live{font-family:"Geist Mono",monospace;font-size:8px;color:var(--live);
+  border:1px solid var(--live-dim);border-radius:999px;padding:2px 8px}
+/* ---- diff do commit no dialog ---- */
+.diffpre{font-family:"Geist Mono",monospace;font-size:9.5px;line-height:1.6;color:var(--txt);
+  background:var(--shell);border:1px solid var(--hair);border-radius:11px;padding:10px 12px;
+  max-height:44vh;overflow:auto;white-space:pre;margin-top:6px}
+.diffpre .add{color:var(--live)}.diffpre .del{color:#e24b4a}
+.dlg.wide{width:min(760px,94%)}
+.dm .dmbtn{float:right;font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--txt);
+  background:var(--hair);border:1px solid var(--edge-past);border-radius:999px;
+  padding:3px 10px;cursor:pointer;margin-left:8px}
+/* ---- gantt / timeline por papel ---- */
+.gantt{position:absolute;inset:0;z-index:15;display:none;overflow:auto;
+  background:var(--core);padding:22px 24px 60px}
+.gantt.on{display:block}
+.g-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.g-name{width:110px;flex:0 0 110px;font-family:"Geist Mono",monospace;font-size:9px;
+  color:var(--dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-lane{flex:1;position:relative;height:22px;background:var(--shell);border-radius:7px}
+.g-bar{position:absolute;top:3px;bottom:3px;border-radius:5px;background:var(--live-soft);
+  border:1px solid var(--live-dim);font-family:"Geist Mono",monospace;font-size:8px;
+  color:var(--txt);display:flex;align-items:center;padding:0 5px;overflow:hidden;
+  white-space:nowrap;cursor:default;min-width:3px}
+.g-bar.run{background:var(--live-soft);border-color:var(--live);animation:gpulse 1.3s ease-in-out infinite}
+.g-bar.hum{background:var(--hold-soft);border-color:var(--hold-dim);color:var(--hold)}
+.g-axis{display:flex;justify-content:space-between;margin:4px 0 14px 120px;
+  font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--hair);border-radius:3px}
 </style>
 </head>
@@ -309,13 +356,16 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 
   <div class="shell"><div class="core">
     <div class="strip">
-      <div class="chip btn ok" id="c-panl" title="mostrar/ocultar coluna do time">&#9703;</div>
+      <div class="chip btn ok" id="c-panl" title="mostrar/ocultar coluna do time (ctrl+B)">&#9703;</div>
       <div class="chip" id="c-session"><span class="d"></span>sessão <b>—</b></div>
+      <div class="chip" id="c-tok" style="display:none">&Sigma; <b>0</b> tok</div>
       <span class="grow"></span>
+      <div class="chip btn" id="c-gantt">gantt</div>
+      <div class="chip btn" id="c-runs">runs</div>
       <div class="chip btn ok" id="c-snd">som <b>on</b></div>
       <div class="chip btn" id="c-theme">tema <b>dark</b></div>
       <div class="chip btn" id="c-lang">PT-BR</div>
-      <div class="chip btn ok" id="c-panr" title="mostrar/ocultar coluna de atividade">&#9707;</div>
+      <div class="chip btn ok" id="c-panr" title="mostrar/ocultar coluna de atividade (ctrl+L)">&#9707;</div>
     </div>
     <div class="stagewrap" id="wrap">
       <div class="stage" id="stage"><svg class="edges" id="edges"></svg></div>
@@ -335,6 +385,14 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
         <button id="z-focus" style="font-size:9px" title="centraliza no passo em execução">foco</button>
       </div>
       <div class="status" id="status"><span class="d"></span><span id="status-t">conectando…</span></div>
+      <div class="gantt" id="gantt"></div>
+      <div class="scrub" id="scrub">
+        <button id="sc-play">&#10074;&#10074;</button>
+        <input type="range" id="sc-bar" min="0" max="0" value="0">
+        <span class="sc-i" id="sc-i">0 / 0</span>
+        <button id="sc-speed">6x</button>
+        <button id="sc-live" title="voltar à sessão ao vivo">&#8635; live</button>
+      </div>
     </div>
   </div></div>
 
@@ -390,6 +448,7 @@ const STR={
   ended:"sessão encerrada no terminal",
   requeued:"interrompido — de volta para a fila",
   inferredDone:"concluído (inferido — o passo seguinte do papel começou)",
+  reconDone:"concluído (reconciliado pelo transcript)",
   reopened:"re-despachado — reaberto",
   stalled:n=>"sem eventos há "+n+"s — run interrompida?",
   skipped:"removido na escalação",
@@ -419,6 +478,7 @@ const STR={
   ended:"session ended in the terminal",
   requeued:"interrupted — back in the queue",
   inferredDone:"done (inferred — the role's next step started)",
+  reconDone:"done (reconciled from the transcript)",
   reopened:"re-dispatched — reopened",
   stalled:n=>"no events for "+n+"s — run interrupted?",
   skipped:"removed from the lineup",
@@ -563,7 +623,10 @@ function loungeY(){const base=MIDY-29; /* o TAPETE (caixa do ambiente: base-30..
 /* ================= DOM refs / shared state ================= */
 const stage=$("#stage"),edgesSvg=$("#edges"),stream=$("#stream"),wrap=$("#wrap");
 const nodeEl={},pathEl={},deskEl={},rowEl={};
-let toks={},seatN=0,evN=0,snd=true,doneN=0;
+let toks={},seatN=0,evN=0,snd=true,doneN=0,totalTok=0;
+const fmtTok=v=>v>=1e6?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(1)+"k":String(v);
+function updTok(){const c=$("#c-tok");if(!totalTok){c.style.display="none";return;}
+  c.style.display="";c.innerHTML=`&Sigma; <b>${fmtTok(totalTok)}</b> tok`;}
 const aidRole={};   /* agent_id -> papel */
 const aidStep={};   /* agent_id -> passo (suporta lote paralelo do MESMO papel) */
 const charStep={};  /* papel -> passo onde o personagem esta sentado */
@@ -662,6 +725,15 @@ function autoPanels(clearOv){
 mqSmall.addEventListener("change",()=>autoPanels(true));
 mqTiny.addEventListener("change",()=>autoPanels(true));
 autoPanels(false);
+/* atalhos: ctrl/cmd+B = coluna esquerda, ctrl/cmd+L = coluna direita.
+   (alguns browsers reservam ctrl+L pra barra de endereco; quando o SO
+   deixar o evento chegar, a gente usa) */
+addEventListener("keydown",e=>{
+  if(!(e.ctrlKey||e.metaKey)||e.altKey||e.shiftKey)return;
+  const k=e.key.toLowerCase();
+  if(k==="b"){e.preventDefault();$("#c-panl").click();}
+  else if(k==="l"){e.preventDefault();$("#c-panr").click();}
+});
 
 /* ================= chips / audio / title flash ================= */
 $("#c-snd").onclick=()=>{snd=!snd;const c=$("#c-snd");c.classList.toggle("ok",snd);
@@ -958,7 +1030,7 @@ function revertRunning(s){
   s.status="pending";
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
-  s._start=null;s._tools=0;
+  s._start=null;s._end=null;s._tools=0;
   const n=nodeEl[s.id];
   if(n){n.classList.remove("active");const tm=n.querySelector(".n-tm");if(tm)tm.textContent="0s";}
   EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];if(b===s.id&&p)p.classList.remove("lit");});
@@ -984,7 +1056,7 @@ function unDone(s){
 /* BINDING pela descricao do dispatch (nao mais "o proximo pendente"):
    o Leader escreve "frontend-intern: Task 16 montagem /tarefas" e isso
    identifica o passo mesmo apos interrupcao/re-despacho */
-function bindStep(role,desc){
+function bindStep(role,desc,strongOnly){
   const cand=steps.filter(q=>!q._dyn&&!q.human&&q.owner===role);
   if(!cand.length)return null;
   const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
@@ -1003,6 +1075,7 @@ function bindStep(role,desc){
     });
     if(best&&bs>=3)return best; /* match forte (numero do passo coincidiu) */
   }
+  if(strongOnly)return null; /* recon: sem match forte, nao arrisca */
   return cand.find(q=>q.status==="pending")||null; /* fallback: a fila */
 }
 
@@ -1013,7 +1086,7 @@ function bindStep(role,desc){
 function closeOrphan(s,msgKey){
   if(s.status!=="running"&&s.status!=="pending")return;
   const wasRunning=s.status==="running";
-  s.status="done";
+  s.status="done";s._end=nowT();
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
   const n=nodeEl[s.id];
@@ -1185,7 +1258,7 @@ function resolveWaitingGates(){
   steps.forEach(s=>{
     if(s.status!=="waiting")return;
     any=true;
-    s.status="done";
+    s.status="done";s._end=nowT();
     const n=nodeEl[s.id];
     if(n){n.classList.remove("active");n.classList.add("done");
       if(s._start)n.querySelector(".n-tm").textContent=
@@ -1298,9 +1371,9 @@ function route(e){
       chain(role,async()=>{const tk=toks[role];if(tk)tk.el.classList.remove("busy");});
       return;}
     /* ---- LOGICA sincrona ---- */
-    s.status="done";
+    s.status="done";s._end=e.t||nowT();
+    if(e.tok){s._tok=e.tok;totalTok+=e.tok;updTok();}
     if(s._pr){s._pr.remove();s._pr=null;}
-    const fmtTok=v=>v>=1000?(v/1000).toFixed(1)+"k":String(v);
     const finalTxt=(s._tools||0)+" "+t("actions")+" · "+
       (Math.max(0,(e.t||nowT())-(s._start||e.t))/1000).toFixed(0)+"s"+
       (e.tok?" · "+fmtTok(e.tok)+" tok":"");
@@ -1397,7 +1470,7 @@ function route(e){
         if(liveMode)chime();
         flashTitle(true);
       }else{
-        s.status="done";
+        s.status="done";s._end=e.t||nowT();
         n.classList.remove("active");n.classList.add("done");
         if(s._start)n.querySelector(".n-tm").textContent=
           (Math.max(0,(e.t||nowT())-s._start)/1000).toFixed(0)+"s";
@@ -1412,6 +1485,18 @@ function route(e){
         leader(t("consolidating"),false);
       }
     }return;}
+  if(e.ev==="recon"){ /* transcript JSONL = fonte da verdade (emitido pelo cli.mjs):
+      Task com tool_result no transcript TERMINOU, mesmo com SubagentStop perdido */
+    (e.done||[]).forEach(d=>{
+      const role=norm(d.sub);if(!role)return;
+      const s=bindStep(role,String(d.desc||"").replace(/^[a-z-]+\s*:\s*/i,""),true);
+      if(s&&(s.status==="running"||s.status==="pending"))closeOrphan(s,"reconDone");
+    });return;}
+  if(e.ev==="commitref"){ /* commit do passo: vira diff clicavel no dialog do card */
+    const s=stepsById[e.id];if(!s)return;
+    s._commit=e.hash;
+    const n=nodeEl[s.id];if(n)n.classList.add("hasnotes");
+    return;}
   if(e.ev==="SessionEnd"){ /* fim oficial da sessao: fecha a cena com honestidade */
     steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
     cur.done=true;cur.gate=null;flashTitle(false);hideGate();
@@ -1457,37 +1542,183 @@ function openCard(s){
       d.textContent=(x.status==="done"?"✓ ":"● ")+x.id+" · "+x.owner.replace("-intern","")+" — "+x.title+"  ("+met+")";
       B.appendChild(d);});
   }
+  if(s._commit){ /* diff read-only servido pelo cli.mjs (git show) */
+    H("commit");
+    const d=document.createElement("div");d.className="dm sub";
+    d.textContent=s._commit.slice(0,10);
+    const b=document.createElement("button");b.className="dmbtn";
+    b.textContent=LANG==="pt"?"ver diff":"view diff";
+    b.onclick=async()=>{
+      b.disabled=true;b.textContent="…";
+      let txt;try{const r=await fetch("/show/"+s._commit);txt=await r.text();}
+      catch(e){txt="(diff indisponível)";}
+      document.querySelector(".dlg").classList.add("wide");
+      let pre=B.querySelector(".diffpre");
+      if(!pre){pre=document.createElement("pre");pre.className="diffpre";B.appendChild(pre);}
+      pre.textContent="";
+      txt.split("\n").slice(0,1200).forEach(l=>{
+        const sp=document.createElement("span");
+        if(l.startsWith("+")&&!l.startsWith("+++"))sp.className="add";
+        else if(l.startsWith("-")&&!l.startsWith("---"))sp.className="del";
+        sp.textContent=l+"\n";pre.appendChild(sp);});
+      b.textContent=LANG==="pt"?"ver diff":"view diff";b.disabled=false;
+    };
+    d.appendChild(b);B.appendChild(d);
+  }
   $("#dlgwrap").classList.add("on");
 }
 const openNotes=openCard;
-$("#dlg-x").onclick=()=>$("#dlgwrap").classList.remove("on");
-$("#dlgwrap").onclick=e=>{if(e.target.id==="dlgwrap")$("#dlgwrap").classList.remove("on");};
+const closeDlg=()=>{$("#dlgwrap").classList.remove("on");
+  document.querySelector(".dlg").classList.remove("wide");
+  const p=document.querySelector(".dlg .diffpre");if(p)p.remove();};
+$("#dlg-x").onclick=closeDlg;
+$("#dlgwrap").onclick=e=>{if(e.target.id==="dlgwrap")closeDlg();};
+
+/* ================= historico de runs ================= */
+$("#c-runs").onclick=async()=>{
+  let data;try{data=await(await fetch("/runs")).json();}catch(e){return;}
+  $("#dlg-t").textContent=LANG==="pt"?"runs gravadas":"recorded runs";
+  $("#dlg-s").textContent=(data.runs||[]).length+" ndjson";
+  const B=$("#dlg-body");B.innerHTML="";
+  (data.runs||[]).forEach(r=>{
+    const row=document.createElement("div");row.className="runrow";
+    const when=new Date(r.mtime).toLocaleString(LANG==="pt"?"pt-BR":"en-US",
+      {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    row.innerHTML=`<div class="rr-t"><div class="rr-n">${r.title||r.session.slice(0,12)}</div>
+      <div class="rr-m">${when} · ${r.steps||0} passos · ${(r.size/1024).toFixed(0)}KB · ${r.session.slice(0,8)}</div></div>`
+      +(r.session===data.live?'<span class="rr-live">ao vivo</span>':"");
+    row.onclick=()=>{location.href=r.session===data.live?"/":"/?session="+encodeURIComponent(r.session)+"&replay=1";};
+    B.appendChild(row);
+  });
+  if(!(data.runs||[]).length)B.innerHTML=`<div class="dm sub">${LANG==="pt"?"nenhuma run gravada ainda":"no recorded runs yet"}</div>`;
+  $("#dlgwrap").classList.add("on");
+};
+
+/* ================= gantt / timeline por papel ================= */
+let ganttOn=false,ganttIv=null;
+$("#c-gantt").onclick=()=>{
+  ganttOn=!ganttOn;
+  $("#gantt").classList.toggle("on",ganttOn);
+  $("#c-gantt").classList.toggle("ok",ganttOn);
+  if(ganttOn){renderGantt();ganttIv=setInterval(renderGantt,1000);}
+  else if(ganttIv){clearInterval(ganttIv);ganttIv=null;}
+};
+function renderGantt(){
+  const g=$("#gantt");
+  const timed=steps.filter(s=>s._start);
+  if(!timed.length){g.innerHTML=`<div class="empty">${LANG==="pt"?"nenhum passo iniciado ainda":"no step started yet"}</div>`;return;}
+  const t0=Math.min(...timed.map(s=>s._start));
+  const t1=Math.max(nowT(),...timed.map(s=>s._end||nowT()));
+  const span=Math.max(1000,t1-t0);
+  const fmt=ms=>{const s=Math.round(ms/1000);return s>=60?Math.floor(s/60)+"m"+String(s%60).padStart(2,"0"):s+"s";};
+  const roles=[...new Set(steps.map(s=>s.human?"humano":s.owner))];
+  let html=`<div class="g-axis"><span>0s</span><span>${fmt(span/2)}</span><span>${fmt(span)}</span></div>`;
+  roles.forEach(role=>{
+    const own=timed.filter(s=>(s.human?"humano":s.owner)===role);
+    if(!own.length)return;
+    let bars="";
+    own.forEach(s=>{
+      const a=(s._start-t0)/span*100,b=((s._end||nowT())-t0)/span*100;
+      const cls=s.human?" hum":(s.status==="running"||s.status==="waiting")?" run":"";
+      const tip=`${s.id} — ${s.title} (${fmt((s._end||nowT())-s._start)}${s._tok?" · "+fmtTok(s._tok)+" tok":""})`;
+      bars+=`<div class="g-bar${cls}" style="left:${a}%;width:${Math.max(.4,b-a)}%" title="${tip.replace(/"/g,"&quot;")}">${s.id}</div>`;
+    });
+    html+=`<div class="g-row"><div class="g-name">${role.replace("-intern","")}</div><div class="g-lane">${bars}</div></div>`;
+  });
+  /* wait-time: buracos entre o fim de um passo e o inicio do proximo (global) */
+  const seq=[...timed].sort((x,y)=>x._start-y._start);
+  let waits=0;for(let i=1;i<seq.length;i++){const gap=seq[i]._start-Math.max(...seq.slice(0,i).map(s=>s._end||seq[i]._start));if(gap>0)waits+=gap;}
+  html+=`<div class="g-axis" style="margin-top:16px"><span>${LANG==="pt"?"tempo ocioso entre passos":"idle time between steps"}: ${fmt(waits)}</span><span>${LANG==="pt"?"total da run":"run total"}: ${fmt(span)}${totalTok?" · Σ "+fmtTok(totalTok)+" tok":""}</span></div>`;
+  g.innerHTML=html;
+}
+
+/* ================= reset completo (seek do replay) ================= */
+function fullReset(){
+  hardReset();
+  plan=null;steps=[];stepsById={};EDGES=[];
+  EV_LOG.length=0;
+  for(const k in aidRole)delete aidRole[k];
+  for(const k in lastDispatch)delete lastDispatch[k];
+  totalTok=0;updTok();evN=0;$("#ec").textContent="0";
+  stream.innerHTML="";
+  edgesSvg.innerHTML="";
+  if(ganttOn)renderGantt();
+}
+
+/* ================= replay client-side + scrubber ================= */
+const RP={ev:[],i:-1,playing:false,speed:6,timer:null};
+const SPEEDS=[2,6,25,100];
+function scrubUI(){
+  const bar=$("#sc-bar");bar.max=Math.max(0,RP.ev.length-1);bar.value=Math.max(0,RP.i);
+  $("#sc-i").textContent=(RP.i+1)+" / "+RP.ev.length;
+  $("#sc-play").innerHTML=RP.playing?"&#10074;&#10074;":"&#9654;";
+}
+function playLoop(){
+  clearTimeout(RP.timer);
+  if(!RP.playing)return;
+  if(RP.i>=RP.ev.length-1){
+    RP.playing=false;scrubUI();
+    statusKey="replayDone";$("#status-t").textContent=t(statusKey);return;}
+  const prev=RP.i>=0?RP.ev[RP.i]:null,nxt=RP.ev[RP.i+1];
+  const wait=prev&&prev.t&&nxt.t?Math.min(2500,Math.max(60,(nxt.t-prev.t)/RP.speed)):220;
+  RP.timer=setTimeout(()=>{RP.i++;applyEvent(RP.ev[RP.i]);scrubUI();playLoop();},wait);
+}
+function seek(i){
+  clearTimeout(RP.timer);
+  liveMode=false;
+  fullReset();
+  for(let j=0;j<=i&&j<RP.ev.length;j++)applyEvent(RP.ev[j]);
+  RP.i=Math.min(i,RP.ev.length-1);
+  liveMode=true;fit();scrubUI();
+  if(RP.playing)playLoop();
+}
+function startReplay(events){
+  MODE="replay";RP.ev=events||[];RP.i=-1;RP.playing=true;
+  if(!SPEEDS.includes(RP.speed))RP.speed=6;
+  $("#sc-speed").textContent=RP.speed+"x";
+  $("#scrub").classList.add("on");$("#status").style.display="none";
+  liveMode=true;scrubUI();playLoop();
+}
+$("#sc-play").onclick=()=>{RP.playing=!RP.playing;scrubUI();if(RP.playing)playLoop();};
+$("#sc-bar").oninput=e=>seek(parseInt(e.target.value,10));
+$("#sc-speed").onclick=()=>{RP.speed=SPEEDS[(SPEEDS.indexOf(RP.speed)+1)%SPEEDS.length];
+  $("#sc-speed").textContent=RP.speed+"x";};
+$("#sc-live").onclick=()=>location.href="/";
 
 /* ================= SSE ================= */
+let FULLSESS=null;
 function connect(){
-  const es=new EventSource("/events");
+  /* ?session=<id>&replay=1 (historico de runs) passa direto pro server */
+  const es=new EventSource("/events"+location.search);
   const st=$("#status"),stT=$("#status-t");
-  es.onopen=()=>{st.className="status live";};
-  es.onerror=()=>{st.className="status dead";statusKey="disconnected";stT.textContent=t(statusKey);};
+  es.onopen=()=>{if(MODE==="live")st.className="status live";};
+  es.onerror=()=>{if(MODE!=="live")return;
+    st.className="status dead";statusKey="disconnected";stT.textContent=t(statusKey);};
   es.onmessage=m=>{
     lastRxWall=Date.now();
-    if(MODE==="live"&&st.className==="status dead"&&statusKey==="live"){
-      st.className="status live";stT.textContent=t("live");} /* silencio acabou */
     let d;try{d=JSON.parse(m.data);}catch{return;}
     if(d.type==="hello"){
-      if(plan){location.reload();return;} /* reconexao: estado limpo, sem re-aplicar em cima */
+      /* sessao TROCOU (retarget do server) com estado na tela: recomeca limpo */
+      if(plan&&d.session&&FULLSESS&&d.session!==FULLSESS){location.reload();return;}
+      FULLSESS=d.session||FULLSESS;
       MODE=d.mode;
+      if(d.speed&&SPEEDS.includes(d.speed))RP.speed=d.speed;
       statusKey=d.mode==="replay"?"replay":"live";stT.textContent=t(statusKey);
       st.className="status live";
       SESS=(d.session||"—").slice(0,8);
       $("#c-session").innerHTML=`<span class="d"></span>${t("session")} <b>${SESS}</b>`;
       $("#c-session").classList.add("ok");
-      liveMode=d.mode==="replay"; /* replay anima; live anima depois do batch */
-    }
-    if(d.type==="batch"){liveMode=false;d.events.forEach(applyEvent);
-      chain("main",()=>{liveMode=true;fit();});}
+      liveMode=false; /* batch / resume / replay-batch decidem */
+      return;}
+    if(d.type==="resume"){ /* reconexao com Last-Event-ID: o estado da tela vale */
+      statusKey="live";stT.textContent=t(statusKey);st.className="status live";
+      liveMode=true;return;}
+    if(d.type==="batch"){
+      if(plan){location.reload();return;} /* server nao retomou e a tela tem estado: limpa */
+      liveMode=false;d.events.forEach(applyEvent);
+      chain("main",()=>{liveMode=true;fit();});return;}
+    if(d.type==="replay-batch"){startReplay(d.events);return;}
     if(d.type==="event")applyEvent(d.event);
-    if(d.type==="end"){statusKey="replayDone";stT.textContent=t(statusKey);es.close();}
   };
 }
 document.title="team-view";
