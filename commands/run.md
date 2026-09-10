@@ -19,3 +19,7 @@ muda execução, não substitui planejamento. Ajustes de escopo entram como pass
 Antes de qualquer coisa, aplique o HARD-GATE: confirme que a sessão está numa branch de
 trabalho (qualquer nome, EXCETO `main`, `develop` e `staging`) e que o arquivo de plano existe.
 Se faltar algum, PARE e peça ao usuário.
+
+No re-despacho de um passo (correção pedida pelo reviewer, por exemplo), mantenha o
+**id do passo** no início da `description` — é por ele que o team-view reconhece o passo
+voltando e soma o custo da segunda rodada em vez de criar um passo extra.

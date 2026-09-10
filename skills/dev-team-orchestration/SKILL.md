@@ -160,16 +160,23 @@ no dispatch desse passo.
    leva SÓ o slice DAQUELE passo + os contratos já entregues + a seção de `patterns/*` + o
    arquivo análogo. No modo skill-avulsa (sem os agentes nomeados), caia no comportamento
    antigo: `subagent_type: general-purpose` com `references/agents/<x>.md` colado no prompt.
-   Em ambos: `model` do roster, `description` no formato `"<papel>: <passo>"` (ex.:
+   Em ambos: `model` do roster, `description` no formato `"<papel>: <id> <passo>"` (ex.:
    "backend-intern: 10.2 DTO de notas"). **Um passo por dispatch**; nunca empacote vários
    passos nem duas tarefas que tocam o mesmo arquivo.
+   **O `<id>` do passo no plan-graph é obrigatório no início da description, e vale também
+   no RE-DESPACHO.** É por ele que o viewer sabe que este dispatch é o mesmo passo voltando
+   (reabre o card, soma o custo da segunda rodada) em vez de trabalho novo. Re-despacho de
+   correção é `"backend-intern: 10.2 service — corrigir achado do reviewer"`, NUNCA
+   `"backend-intern: corrigir achado do reviewer"` — sem o id o viewer não tem como saber
+   qual passo voltou, e pendura a correção como passo extra.
 4. Cada dispatch faz **commit local do seu passo** (um commit por passo) e devolve um relatório
    curto (fez / arquivos / commit / contrato pra frente).
 5. **Gate de revisão (fim da camada):** despache `reviewer-intern` (opus, read-only) no diff da
    camada inteira.
    - Aprova → próxima camada.
-   - Achou problema → re-despache **só o passo culpado** com o feedback; repita até aprovar. Não
-     avance com pendência.
+   - Achou problema → re-despache **só o passo culpado** com o feedback, mantendo o **id do
+     passo** no início da `description` (ver item 3); repita até aprovar. Não avance com
+     pendência.
 
 ### N+1. QA (uma vez, no fim — não por camada; MODO ENXUTO por padrão)
 Despache `qa-intern`: `pnpm lint` + `pnpm build` sempre; testes = **só os specs afetados** pela

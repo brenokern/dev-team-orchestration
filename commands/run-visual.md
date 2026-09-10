@@ -75,3 +75,7 @@ Com o gate aprovado, adicione ao fluxo normal da skill estas obrigações do mod
 
 Todo o resto — camadas, revisão por camada, QA, UX, TLDR — segue o SKILL.md sem mudança.
 A aprovação humana acontece SEMPRE no terminal; o viewer apenas avisa e mostra.
+
+No re-despacho de um passo (correção pedida pelo reviewer, por exemplo), mantenha o
+**id do passo** no início da `description` — é por ele que o team-view reconhece o passo
+voltando e soma o custo da segunda rodada em vez de criar um passo extra.
