@@ -1,0 +1,51 @@
+{"t": 1700000000000, "ev": "Stop"}
+{"t": 1700000001000, "ev": "plan", "plan": {"title": "regressao — Stop assincrono do Leader", "roster": [{"id": "backend-intern", "model": "opus"}, {"id": "frontend-intern", "model": "fable"}, {"id": "reviewer-intern", "model": "opus"}], "steps": [{"id": "h0", "title": "aprovar a escalação do time", "layer": "humano", "owner": "voce", "deps": [], "human": true}, {"id": "s1", "title": "s1 destaques e visto", "layer": "backend", "owner": "backend-intern", "deps": ["h0"]}, {"id": "s2", "title": "s2 configurar destaque", "layer": "backend", "owner": "backend-intern", "deps": ["s1"]}, {"id": "s3", "title": "s3 badge no sidebar", "layer": "frontend", "owner": "frontend-intern", "deps": ["s2"]}, {"id": "r1", "title": "r1 revisão backend", "layer": "revisão", "owner": "reviewer-intern", "deps": ["s2"]}]}}
+{"t": 1700000002500, "ev": "gate", "id": "h0", "status": "waiting", "msg": "aprovar a escalação no terminal"}
+{"t": 1700000011500, "ev": "gate", "id": "h0", "status": "approved"}
+{"t": 1700000013500, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s1 destaques e visto", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000015100, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb"}
+{"t": 1700000016500, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tool": "Bash", "info": "cat -n apps/backend/src/modules/novidade/novidade.service.ts"}
+{"t": 1700000017900, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tool": "Read", "info": "apps/backend/prisma/models/novidade.prisma"}
+{"t": 1700000019300, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tool": "Edit", "info": "apps/backend/src/modules/novidade/novidade.service.ts"}
+{"t": 1700000022500, "ev": "Stop"}
+{"t": 1700000054000, "ev": "SubagentStop", "aid": "g01"}
+{"t": 1700000085500, "ev": "SubagentStop", "aid": "g02"}
+{"t": 1700000117000, "ev": "SubagentStop", "aid": "g03"}
+{"t": 1700000126000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tool": "Write", "info": "apps/backend/src/modules/novidade/dto/request/destaque.dto.ts"}
+{"t": 1700000135000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tool": "Bash", "info": "cd apps/backend && pnpm test -- novidade.service.spec.ts"}
+{"t": 1700000387000, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "a2453e2872f662ebb", "tok": 101526}
+{"t": 1700000389000, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s2 configurar destaque", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000390600, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37"}
+{"t": 1700000392000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tool": "Bash", "info": "cat -n apps/backend/src/modules/novidade/novidade.service.ts"}
+{"t": 1700000393400, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tool": "Read", "info": "apps/backend/prisma/models/novidade.prisma"}
+{"t": 1700000394800, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tool": "Edit", "info": "apps/backend/src/modules/novidade/novidade.service.ts"}
+{"t": 1700000398000, "ev": "Stop"}
+{"t": 1700000429500, "ev": "SubagentStop", "aid": "g04"}
+{"t": 1700000461000, "ev": "SubagentStop", "aid": "g05"}
+{"t": 1700000492500, "ev": "SubagentStop", "aid": "g06"}
+{"t": 1700000501500, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tool": "Write", "info": "apps/backend/src/modules/novidade/dto/request/destaque.dto.ts"}
+{"t": 1700000510500, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tool": "Bash", "info": "cd apps/backend && pnpm test -- novidade.service.spec.ts"}
+{"t": 1700000747500, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "a88954f6d68fe9d37", "tok": 84820}
+{"t": 1700000749500, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: s3 badge no sidebar", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000751100, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e"}
+{"t": 1700000752500, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e", "tool": "Read", "info": "apps/frontend/src/components/nav-main.tsx"}
+{"t": 1700000753900, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e", "tool": "Edit", "info": "apps/frontend/src/components/nav-main.tsx"}
+{"t": 1700000755300, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e", "tool": "Write", "info": "apps/frontend/app/(private)/novidades/components/badge-novidades.tsx"}
+{"t": 1700000758500, "ev": "Stop"}
+{"t": 1700000790000, "ev": "SubagentStop", "aid": "g07"}
+{"t": 1700000821500, "ev": "SubagentStop", "aid": "g08"}
+{"t": 1700000853000, "ev": "SubagentStop", "aid": "g09"}
+{"t": 1700000862000, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e", "tool": "Bash", "info": "pnpm --filter frontend lint"}
+{"t": 1700001101000, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "ad00fb1d7beca136e", "tok": 89345}
+{"t": 1700001103000, "ev": "PreToolUse", "tool": "Agent", "info": "reviewer-intern: r1 revisão backend", "sub": "dev-team-orchestration:reviewer-intern"}
+{"t": 1700001104600, "ev": "SubagentStart", "agent": "dev-team-orchestration:reviewer-intern", "aid": "a73a45cd12e451f17"}
+{"t": 1700001106000, "ev": "PreToolUse", "agent": "dev-team-orchestration:reviewer-intern", "aid": "a73a45cd12e451f17", "tool": "Bash", "info": "git diff origin/develop...HEAD -- apps/backend"}
+{"t": 1700001107400, "ev": "PreToolUse", "agent": "dev-team-orchestration:reviewer-intern", "aid": "a73a45cd12e451f17", "tool": "Read", "info": "apps/backend/src/modules/novidade/novidade.controller.ts"}
+{"t": 1700001110600, "ev": "Stop"}
+{"t": 1700001142100, "ev": "SubagentStop", "aid": "g10"}
+{"t": 1700001173600, "ev": "SubagentStop", "aid": "g11"}
+{"t": 1700001205100, "ev": "SubagentStop", "aid": "g12"}
+{"t": 1700001265100, "ev": "SubagentStop", "agent": "dev-team-orchestration:reviewer-intern", "aid": "a73a45cd12e451f17", "tok": 41233}
+{"t": 1700001267100, "ev": "note", "id": "r1", "msg": "reviewer: APROVADO — 1 ajuste menor no DTO, sem bloqueio"}
+{"t": 1700001268600, "ev": "Stop"}
+{"t": 1700001269400, "ev": "SessionEnd"}
