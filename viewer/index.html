@@ -915,27 +915,37 @@ function buildGraph(){
   /* altura uniforme = a do card que mais precisa (titulo nunca corta);
      SO DEPOIS o offset de centralizacao, em px exatos */
   let core=100;
-  steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
-    c.style.height="auto";core=Math.max(core,c.offsetHeight);});
-  steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=core+"px";});
+  steps.forEach(s=>{const n=nodeEl[s.id];if(!n)return;const c=n.querySelector(".n-core");
+    if(!c)return;c.style.height="auto";core=Math.max(core,c.offsetHeight);});
+  steps.forEach(s=>{const n=nodeEl[s.id];if(!n)return;
+    const c=n.querySelector(".n-core");if(c)c.style.height=core+"px";});
   CORE_H=core;
-  CARD_H=nodeEl[steps[0].id].offsetHeight; /* altura REAL (core + moldura) */
-  steps.forEach(s=>gsap.set(nodeEl[s.id],
-    {x:-88,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"}));
-  /* fonte web carrega depois: re-mede e re-centraliza (altura pode mudar) */
+  CARD_H=(nodeEl[steps[0].id]||{offsetHeight:120}).offsetHeight; /* altura REAL (core + moldura) */
+  steps.forEach(s=>{const n=nodeEl[s.id];if(n)gsap.set(n,
+    {x:-88,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"});});
+  /* fonte web carrega depois: re-mede e re-centraliza (altura pode mudar).
+     ATENCAO: este callback e ASSINCRONO — quando ele roda, `steps` ja pode ter
+     passos SEM card em nodeEl (dinamicos do addDynStep herdam a geometria do
+     pai; gates de runtime nascem depois). Desreferenciar nodeEl[s.id] cegamente
+     estourava TypeError aqui e abortava o loop no meio, deixando TODOS os cards
+     em height:auto — o layout desmontando. Acontece sobretudo no F5, em que o
+     historico inteiro e reaplicado antes da fonte carregar. */
+  const cards=()=>steps.map(s=>nodeEl[s.id]).filter(Boolean);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{
+    const list=cards();if(!list.length)return;
     let c2=100;
-    steps.forEach(s=>{const c=nodeEl[s.id].querySelector(".n-core");
+    list.forEach(n=>{const c=n.querySelector(".n-core");if(!c)return;
       c.style.height="auto";c2=Math.max(c2,c.offsetHeight);});
-    steps.forEach(s=>{nodeEl[s.id].querySelector(".n-core").style.height=c2+"px";});
-    const nh=nodeEl[steps[0].id].offsetHeight;
+    list.forEach(n=>{const c=n.querySelector(".n-core");if(c)c.style.height=c2+"px";});
+    const nh=list[0].offsetHeight;
     if(Math.abs(nh-CARD_H)>2){
       CORE_H=c2;CARD_H=nh;
       steps.forEach(s=>{
-        gsap.set(nodeEl[s.id],{y:-CARD_H/2});
+        const n=nodeEl[s.id];if(!n)return;
+        gsap.set(n,{y:-CARD_H/2});
         const d=deskEl[s.id];
         if(d){d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";}});
-    }});
+    }}).catch(()=>{}); /* medir fonte nunca pode derrubar o palco */
   SH=Math.max(720,FLOWY.max+CARD_H+170);
   loungeY();
   stage.style.width=SW+"px";stage.style.height=SH+"px";
