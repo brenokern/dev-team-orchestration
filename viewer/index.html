@@ -1155,7 +1155,7 @@ function closeOrphan(s,msgKey,tEnd){
 const SILENCE_MS=90000;
 function armStopWatch(s,tStop){
   const alive=()=>Math.max(s._lastEv||0,s._start||0);
-  if(MODE==="replay"){ /* replay: decide na hora, com o tempo do EVENTO */
+  if(MODE==="replay"||CATCHUP){ /* historico: decide na hora, com o tempo do EVENTO */
     if((tStop||nowT())-alive()>SILENCE_MS)revertRunning(s);
     return;}
   clearTimeout(s._sw);
