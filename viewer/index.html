@@ -441,6 +441,7 @@ const STR={
   started:(i,tt)=>"iniciou "+i+" — "+tt,
   finished:i=>"encerrou "+i+" — relatório no terminal",
   dispatched:"despachou: ",offPlan:"trabalhando (passo fora do plan-graph)",
+  noPlan:"o time comecou a trabalhar mas NENHUM plan-graph foi publicado — o palco fica vazio. Rode /dev-team-orchestration:run-visual, ou peca ao Leader o `emit.mjs plan`.",
   offPlanEnd:"encerrou (fora do plan-graph)",
   approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
   natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
@@ -471,6 +472,7 @@ const STR={
   started:(i,tt)=>"started "+i+" — "+tt,
   finished:i=>"finished "+i+" — report in the terminal",
   dispatched:"dispatched: ",offPlan:"working (step outside the plan-graph)",
+  noPlan:"the team started working but NO plan-graph was published — the stage stays empty. Use /dev-team-orchestration:run-visual, or ask the Leader for `emit.mjs plan`.",
   offPlanEnd:"finished (outside the plan-graph)",
   approved:"approved — the team moves on",teamEnd:"team finished.",you:"you",
   natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
@@ -1358,7 +1360,12 @@ function route(e){
       liveMode=prev;fit();
     }else buildGraph();
     return;}
-  if(!plan)return; /* eventos antes do plano: so log do leader */
+  if(!plan){ /* eventos antes do plano: so log do leader */
+    /* run inteira sem `emit.mjs plan` (medido: acontece) deixava o viewer em
+       branco sem dizer por que. Avisa UMA vez, no primeiro sinal de trabalho. */
+    if(e.ev==="SubagentStart"&&!route._warned){route._warned=true;
+      log("leader",t("noPlan"),"note");showGate(t("noPlan"));}
+    return;}
   if(e.ev==="SubagentStart"&&e.agent){
     const role=e.agent;if(e.aid)aidRole[e.aid]=role;
     const aid=e.aid||role+"#"+Date.now();

@@ -99,6 +99,10 @@ Como funciona por baixo (e por que é seguro):
 - **Replay**: `node viewer/cli.mjs --replay ~/.claude/team-view/<sessão>.ndjson` reassiste
   qualquer run. `viewer/demo.html` é uma demo standalone com uma run simulada (abra direto no
   browser, sem servidor).
+- **Teste**: `node viewer/test.mjs` carrega as fixtures no viewer de verdade, num Chrome
+  headless (zero deps — CDP pelo WebSocket nativo do Node 22), e checa as invariantes de
+  estado: tempo e token nunca se perdem, card nunca fica em "0s", e o F5 reconstrói o mesmo
+  estado com as mesmas durações. `CHROME=/caminho/do/chrome` sobrescreve a detecção.
 
 Requisitos do modo visual: Claude Code com hooks `SubagentStart`/`SubagentStop` e Node 18+.
 
@@ -156,6 +160,9 @@ viewer/
   cli.mjs                 # server local: tail + SSE + replay (Node 18+, zero deps)
   index.html              # o escritório (read-only, dirigido pelos eventos)
   demo.html               # demo standalone com run simulada
+  test.mjs                # invariantes de estado no browser (Chrome headless via CDP)
+  bench.mjs               # overhead do plugin (máquina + tokens)
+  fixtures/*.ndjson       # runs gravadas que alimentam o teste
 docs/
   team-view.png           # screenshot do viewer
 skills/
