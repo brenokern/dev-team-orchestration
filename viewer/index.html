@@ -659,7 +659,12 @@ const cur={step:null,gate:null,done:false};
 let liveMode=false;
 const EV_LOG=[]; /* todos os eventos (menos plan): permite reconstruir num re-plan */
 let MODE="live",lastEvT=0,lastRxWall=Date.now();
-const nowT=()=>(MODE==="replay"&&lastEvT)?lastEvT:Date.now();
+/* CATCHUP: reaplicacao de historico (batch de um F5, ou reconstrucao de
+   re-plan). Durante ela o "agora" e o tempo do ULTIMO EVENTO APLICADO — usar
+   Date.now() ali recalculava toda duracao inferida contra o relogio novo, e
+   por isso o mesmo passo aparecia com 286s, 379s e 409s em cargas diferentes. */
+let CATCHUP=false;
+const nowT=()=>((MODE==="replay"||CATCHUP)&&lastEvT)?lastEvT:Date.now();
 /* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
 let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
 const lastDispatch={}; /* false durante o batch de catch-up */
@@ -1348,8 +1353,8 @@ function route(e){
       hardReset();
       buildGraph();
       log("leader",LANG==="pt"?"plan-graph atualizado — reconstruindo":"plan-graph updated — rebuilding");
-      const prev=liveMode;liveMode=false;
-      EV_LOG.forEach(ev=>route(ev));
+      const prev=liveMode;liveMode=false;CATCHUP=true;
+      try{EV_LOG.forEach(ev=>route(ev));}finally{CATCHUP=false;}
       liveMode=prev;fit();
     }else buildGraph();
     return;}
@@ -1737,9 +1742,9 @@ function playLoop(){
 }
 function seek(i){
   clearTimeout(RP.timer);
-  liveMode=false;
+  liveMode=false;CATCHUP=true;
   fullReset();
-  for(let j=0;j<=i&&j<RP.ev.length;j++)applyEvent(RP.ev[j]);
+  try{for(let j=0;j<=i&&j<RP.ev.length;j++)applyEvent(RP.ev[j]);}finally{CATCHUP=false;}
   RP.i=Math.min(i,RP.ev.length-1);
   liveMode=true;fit();scrubUI();
   if(RP.playing)playLoop();
@@ -1786,8 +1791,12 @@ function connect(){
       statusKey="live";stT.textContent=t(statusKey);st.className="status live";
       liveMode=true;return;}
     if(d.type==="batch"){
-      if(plan){location.reload();return;} /* server nao retomou e a tela tem estado: limpa */
-      liveMode=false;d.events.forEach(applyEvent);
+      /* server mandou o historico inteiro (F5, ou reconexao sem resume).
+         Antes: location.reload() quando ja havia estado — recarregar em cima
+         de reconexao e um convite a ciclo. Agora reconstroi em memoria. */
+      if(plan)fullReset();
+      liveMode=false;CATCHUP=true;
+      try{d.events.forEach(applyEvent);}finally{CATCHUP=false;}
       chain("main",()=>{liveMode=true;fit();});return;}
     if(d.type==="replay-batch"){startReplay(d.events);return;}
     if(d.type==="event")applyEvent(d.event);
