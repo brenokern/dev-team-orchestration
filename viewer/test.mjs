@@ -112,6 +112,7 @@ async function rodar(cdp, fixture) {
   /* reescreve os timestamps pra "agora": uma run que acabou de acontecer */
   const ev = fs.readFileSync(fixture, "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
   const fim = ev[ev.length - 1].t, agora = Date.now();
+  const agoraShift = agora - fim; /* mesma translacao aplicada aos eventos */
   const linhas = ev.map(e => JSON.stringify({ ...e, t: agora - (fim - e.t) }));
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(path.join(DIR, SESS + ".ndjson"), linhas.join("\n") + "\n");
@@ -162,6 +163,26 @@ async function rodar(cdp, fixture) {
   ok(tokEsperado === 0 || somaTela >= tokEsperado * 0.99,
     "nenhum token do SubagentStop foi descartado",
     "log=" + tokEsperado + " tela=" + somaTela);
+
+  /* re-despacho: trabalho extra de um papel nunca pendura no card de OUTRO
+     papel (a correcao do backend ia parar no card do reviewer). */
+  const forasteiros = a.steps.filter(s => s.dyn && s.parent &&
+    (a.steps.find(x => x.id === s.parent) || {}).owner !== s.owner);
+  ok(forasteiros.length === 0, "passo extra fica no card do proprio papel",
+    forasteiros.map(s => s.id + " (" + s.owner + ") pendurado em " + s.parent).join(", "));
+
+  /* nenhum passo pode ter sido fechado ANTES da ultima acao do seu proprio
+     agente — e o "personagem levanta no meio do trabalho" visto de fora. */
+  const ultimaAcao = new Map();
+  for (const e of ev) if (e.ev === "PreToolUse" && e.aid) ultimaAcao.set(e.aid, e.t);
+  const cedo = [];
+  for (const [aid, tUlt] of ultimaAcao) {
+    const st = a.steps.find(s => s.tools && s.end && inicio.get(aid) &&
+      Math.abs(s.start - (agoraShift + inicio.get(aid))) < 3000);
+    if (st && st.end + 1500 < agoraShift + tUlt) cedo.push(st.id);
+  }
+  ok(cedo.length === 0, "nenhum passo fechou antes da ultima acao do proprio agente",
+    cedo.join(", "));
 
   ok(a.alturas.length === 1 && a.alturas[0] !== "auto",
     "todos os cards com a mesma altura (fonts.ready terminou)",

@@ -1,0 +1,46 @@
+{"t": 1700000000000, "ev": "plan", "plan": {"title": "regressao — re-despacho depois da revisao", "roster": [{"id": "backend-intern", "model": "opus"}, {"id": "reviewer-intern", "model": "opus"}, {"id": "frontend-intern", "model": "fable"}], "steps": [{"id": "s1", "title": "10.1 model e DTOs", "layer": "backend", "owner": "backend-intern", "deps": []}, {"id": "s2", "title": "10.2 service e controller", "layer": "backend", "owner": "backend-intern", "deps": ["s1"]}, {"id": "r1", "title": "revisão da camada backend", "layer": "revisão", "owner": "reviewer-intern", "deps": ["s2"]}, {"id": "s3", "title": "10.3 página e sidebar", "layer": "frontend", "owner": "frontend-intern", "deps": ["r1"]}]}}
+{"t": 1700000001500, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: 10.1 model e DTOs", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000002700, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1"}
+{"t": 1700000012700, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tool": "Read", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000022700, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tool": "Edit", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000032700, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tool": "Bash", "info": "pnpm test -- nota.service.spec.ts"}
+{"t": 1700000036700, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tok": 52000}
+{"t": 1700000039700, "ev": "Stop"}
+{"t": 1700000041200, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: 10.2 service e controller", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000042400, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2"}
+{"t": 1700000052400, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tool": "Read", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000062400, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tool": "Edit", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000072400, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tool": "Bash", "info": "pnpm test -- nota.service.spec.ts"}
+{"t": 1700000076400, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tok": 61000}
+{"t": 1700000079400, "ev": "Stop"}
+{"t": 1700000080900, "ev": "PreToolUse", "tool": "Agent", "info": "reviewer-intern: revisão da camada backend", "sub": "dev-team-orchestration:reviewer-intern"}
+{"t": 1700000082100, "ev": "SubagentStart", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR1"}
+{"t": 1700000102100, "ev": "PreToolUse", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR1", "tool": "Bash", "info": "git diff origin/develop...HEAD"}
+{"t": 1700000106100, "ev": "SubagentStop", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR1", "tok": 31000}
+{"t": 1700000107100, "ev": "note", "id": "r1", "msg": "reviewer: REPROVADO — service não trata NotFound fora do tenant"}
+{"t": 1700000109100, "ev": "Stop"}
+{"t": 1700000110600, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: corrigir achado do reviewer no service", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000111800, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA3"}
+{"t": 1700000125133, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA3", "tool": "Edit", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000138466, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA3", "tool": "Bash", "info": "pnpm test -- nota.service.spec.ts"}
+{"t": 1700000142466, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA3", "tok": 38000}
+{"t": 1700000144466, "ev": "Stop"}
+{"t": 1700000145966, "ev": "PreToolUse", "tool": "Agent", "info": "reviewer-intern: revisão da camada backend (2a)", "sub": "dev-team-orchestration:reviewer-intern"}
+{"t": 1700000147166, "ev": "SubagentStart", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR2"}
+{"t": 1700000167166, "ev": "PreToolUse", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR2", "tool": "Bash", "info": "git diff origin/develop...HEAD"}
+{"t": 1700000171166, "ev": "SubagentStop", "agent": "dev-team-orchestration:reviewer-intern", "aid": "aR2", "tok": 18000}
+{"t": 1700000172166, "ev": "note", "id": "r1", "msg": "reviewer: APROVADO — achado corrigido"}
+{"t": 1700000174166, "ev": "Stop"}
+{"t": 1700000175666, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: 10.3 página e sidebar", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000176866, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1"}
+{"t": 1700000196866, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1", "tool": "Write", "info": "apps/frontend/app/(private)/notas/page.tsx"}
+{"t": 1700000200866, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1", "tok": 74000}
+{"t": 1700000202866, "ev": "Stop"}
+{"t": 1700000204866, "ev": "note", "id": "r1", "msg": "revisão final: 1 achado no service (10.2)"}
+{"t": 1700000206366, "ev": "PreToolUse", "tool": "Agent", "sub": "dev-team-orchestration:backend-intern", "info": "backend-intern: 10.2 service e controller — corrigir achado da revisão final"}
+{"t": 1700000207566, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA4"}
+{"t": 1700000216566, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA4", "tool": "Read", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000225566, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA4", "tool": "Edit", "info": "apps/backend/src/modules/nota/nota.service.ts"}
+{"t": 1700000231566, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA4", "tok": 22000}
+{"t": 1700000233566, "ev": "Stop"}
+{"t": 1700000234066, "ev": "SessionEnd"}

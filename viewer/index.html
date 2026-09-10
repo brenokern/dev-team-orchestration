@@ -648,9 +648,16 @@ function paintTime(s){
 }
 /* token chega UMA vez na vida do passo (no SubagentStop). Nunca conta duas
    vezes, nunca perde: e o unico evento que carrega custo. */
-function addTok(s,tok){
-  if(!tok||s._tokSeen)return;
-  s._tokSeen=true;s._tok=tok;totalTok+=tok;updTok();
+function addTok(s,tok,aid){
+  if(!tok)return;
+  /* guarda por agent_id, nao por passo: o MESMO stop reaplicado (batch do F5)
+     nao conta duas vezes, mas um RE-DESPACHO — que e outro subagente — soma.
+     Antes o re-despacho tinha o custo silenciosamente descartado. */
+  const key=aid||("t"+tok);
+  s._tokAids=s._tokAids||{};
+  if(s._tokAids[key])return;
+  s._tokAids[key]=tok;
+  s._tok=(s._tok||0)+tok;totalTok+=tok;updTok();
 }
 
 const aidRole={};   /* agent_id -> papel */
@@ -1086,11 +1093,12 @@ function revertRunning(s){
 
 /* re-dispatch de um passo JA fechado (fechamento indevido no meio da run) */
 function unDone(s){
-  s.status="pending";s._tools=0;s._start=null;s._final=null;
+  if(s.status==="pending")return;
+  s.status="pending";s._tools=0;s._start=null;s._end=null;s._final=null;s._stopSeen=0;
   const n=nodeEl[s.id];
   if(n){n.classList.remove("done");
     const ck=n.querySelector(".n-check");if(ck)gsap.set(ck,{opacity:0,scale:.5});
-    const tm=n.querySelector(".n-tm");if(tm)tm.textContent="0s";}
+    const tm=n.querySelector(".n-tm");if(tm)tm.textContent=cardTxt(s);}
   EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];if(a===s.id&&p)p.classList.remove("past");});
   log("leader",s.id+" — "+t("reopened"));updCnt();
 }
@@ -1109,8 +1117,12 @@ function bindStep(role,desc,strongOnly){
     let best=null,bs=0;
     cand.forEach(q=>{
       const tt=norm(q.title)+" "+norm(q.id);
+      /* numero casa como TOKEN INTEIRO. O teste antigo era de substring com
+         borda nao-digito, entao "s1" casava dentro de "10.1" (o "1" depois do
+         ponto) e o re-despacho colava no passo errado. */
+      const tnums=new Set(tt.match(/\d+(?:\.\d+)?/g)||[]);
       let sc=0;
-      nums.forEach(nn=>{if(new RegExp("(^|[^0-9])"+nn.replace(".","\\.")+"([^0-9]|$)").test(tt))sc+=3;});
+      nums.forEach(nn=>{if(tnums.has(nn))sc+=3;});
       (tt.match(/[a-z]{4,}/g)||[]).forEach(w=>{if(dw.has(w))sc+=1;});
       if(q.status==="pending")sc+=.5;
       if(sc>bs){bs=sc;best=q;}
@@ -1150,31 +1162,28 @@ function closeOrphan(s,msgKey,tEnd){
   if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
     if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
 }
-/* Stop visto com passo rodando: pode ser turno assincrono do Leader (normal)
-   ou ESC no terminal (interrompido). A diferenca e SINAL DE VIDA. Espera o
-   passo ficar mudo por SILENCE_MS antes de devolver pra fila; qualquer tool
-   call do proprio passo renova. SubagentStop/closeOrphan cancelam. */
-const SILENCE_MS=90000;
-function armStopWatch(s,tStop){
-  const alive=()=>Math.max(s._lastEv||0,s._start||0);
-  if(MODE==="replay"||CATCHUP){ /* historico: decide na hora, com o tempo do EVENTO */
-    if((tStop||nowT())-alive()>SILENCE_MS)revertRunning(s);
-    return;}
-  clearTimeout(s._sw);
-  const tick=()=>{
-    if(s.status!=="running"){s._sw=null;return;}
-    if(Date.now()-alive()<SILENCE_MS){s._sw=setTimeout(tick,15000);return;}
-    s._sw=null;revertRunning(s);
-  };
-  s._sw=setTimeout(tick,SILENCE_MS);
-}
-function clearStopWatch(s){if(s._sw){clearTimeout(s._sw);s._sw=null;}}
+/* Stop visto com um passo rodando NAO prova nada: no ambiente real o Agent
+   roda assincrono e o turno do Leader fecha com o estagiario trabalhando.
+   Silencio tambem nao prova: um `pnpm build` e um unico tool call e depois
+   minutos mudos. Entao Stop apenas ANOTA a suspeita — quem fecha um passo e
+   evidencia positiva: SubagentStop, recon do transcript, um novo dispatch que
+   assume o passo, SessionEnd, ou o watchdog global de 5 min.
+   Levantar o personagem no palpite era mentir na cara do dev. */
+function armStopWatch(s,tStop){s._stopSeen=tStop||nowT();}
+function clearStopWatch(s){if(s._sw){clearTimeout(s._sw);s._sw=null;}s._stopSeen=0;}
 
+/* SUSPECT_MS: um passo do mesmo papel comecou enquanto este ainda estava
+   rodando. Antes fechava apos 20s com 15s de silencio — e um build/test do
+   qa-intern e UM tool call seguido de minutos calados, entao isso fechava
+   passo VIVO: o personagem levantava e parava de pensar no meio do trabalho.
+   Com o recon do transcript cobrindo o stop perdido, aqui a regra e
+   conservadora: so silencio longo. */
+const SUSPECT_MS=240000;
 function armSuspect(sOld,role){
   clearTimeout(sOld._sus);
   sOld._sus=setTimeout(()=>{
     if(sOld.status!=="running")return;
-    if(sOld._lastEv&&Date.now()-sOld._lastEv<15000){armSuspect(sOld,role);return;} /* ainda vivo */
+    if(sOld._lastEv&&Date.now()-sOld._lastEv<SUSPECT_MS){armSuspect(sOld,role);return;} /* ainda vivo */
     chain(role,async()=>{
       if(sOld.status!=="running")return;
       closeOrphan(sOld);
@@ -1186,13 +1195,18 @@ function armSuspect(sOld,role){
         stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
         charStep[role]=cur2;}
     });
-  },20000);
+  },SUSPECT_MS);
 }
 function addDynStep(role){
   if(!plan||!steps.length)return null;
-  /* pai: passo RODANDO do proprio papel > ultimo concluido > ultimo passo */
-  const running=steps.find(q=>!q.human&&!q._dyn&&q.owner===role&&q.status==="running");
-  const parent=running||lastDone||steps[steps.length-1];
+  /* pai: passo RODANDO do proprio papel > ULTIMO PASSO DO PROPRIO PAPEL >
+     ultimo concluido > ultimo passo. O `lastDone` sozinho pendurava a correcao
+     do backend no card do REVIEWER (que foi quem concluiu por ultimo) — o
+     trabalho extra de um papel pertence visualmente ao passo daquele papel. */
+  const meus=steps.filter(q=>!q.human&&!q._dyn&&q.owner===role);
+  const running=meus.find(q=>q.status==="running");
+  const ultimoMeu=meus.filter(q=>q.status==="done").pop()||meus[meus.length-1];
+  const parent=running||ultimoMeu||lastDone||steps[steps.length-1];
   dynN++;
   const id="x"+dynN;
   const raw=lastDispatch[role]||"";
@@ -1373,7 +1387,15 @@ function route(e){
     /* ---- LOGICA sincrona: ordem = ordem dos EVENTOS, imune ao lag da animacao ---- */
     let s=bindStep(role,lastDispatch[role]);
     if(s&&(s.status==="done"||s.status==="skipped"))unDone(s); /* re-despacho */
-    if(s&&s.status==="running")s=null;                          /* ja rodando: nao rebinda */
+    if(s&&s.status==="running"){
+      /* TAKEOVER: o mesmo passo rodando com OUTRO agent_id. Um papel e uma
+         pessoa (regra da skill), entao isto e re-despacho de um passo cujo
+         subagente morreu sem stop — nao paralelismo. Assume o passo em vez de
+         criar um card fantasma. So nao assume se o antigo deu sinal de vida
+         agora ha pouco (ai e paralelo de verdade). */
+      const vivo=s._lastEv&&nowT()-s._lastEv<30000&&!s._stopSeen;
+      if(vivo)s=null; else {revertRunning(s);unDone(s);}
+    }
     if(!s)s=addDynStep(role);
     if(!s){log(role.replace("-intern",""),t("offPlan"));return;}
     /* FECHAMENTO POR INFERENCIA: um papel e UMA pessoa e roda em ordem.
@@ -1447,7 +1469,7 @@ function route(e){
     if(s.status!=="running"){
       s.status="done";
       if(e.t&&(!s._end||e.t>s._end))s._end=e.t;
-      addTok(s,e.tok);paintTime(s);
+      addTok(s,e.tok,e.aid);paintTime(s);
       const n0=nodeEl[s.id];
       if(n0&&!s._dyn){n0.classList.remove("active");n0.classList.add("done");
         gsap.to(n0.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
@@ -1457,7 +1479,7 @@ function route(e){
       return;}
     /* ---- LOGICA sincrona ---- */
     s.status="done";s._end=e.t||nowT();
-    addTok(s,e.tok);
+    addTok(s,e.tok,e.aid);
     if(s._pr){s._pr.remove();s._pr=null;}
     const finalTxt=cardTxt(s);
     if(s._dyn){ /* subprocesso: fecha dentro do card de origem */
