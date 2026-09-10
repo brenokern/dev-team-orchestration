@@ -627,6 +627,30 @@ let toks={},seatN=0,evN=0,snd=true,doneN=0,totalTok=0;
 const fmtTok=v=>v>=1e6?(v/1e6).toFixed(1)+"M":v>=1000?(v/1000).toFixed(1)+"k":String(v);
 function updTok(){const c=$("#c-tok");if(!totalTok){c.style.display="none";return;}
   c.style.display="";c.innerHTML=`&Sigma; <b>${fmtTok(totalTok)}</b> tok`;}
+/* ---- UNICA fonte do texto do card: le do PASSO, nunca do relogio ----
+   Antes a formula estava copiada em 4 lugares (SubagentStop, closeOrphan,
+   gate, dialog) e elas divergiram: umas usavam o tempo do evento, outras
+   Date.now(). Duracao desconhecida vira "—" em vez de mentir "0s". */
+function cardTxt(s){
+  const dur=(s._start&&s._end)?Math.max(0,s._end-s._start):null;
+  return (s._tools||0)+" "+t("actions")+" · "+(dur==null?"—":(dur/1000).toFixed(0)+"s")+
+    (s._tok?" · "+fmtTok(s._tok)+" tok":"");
+}
+function gateTxt(s){
+  const dur=(s._start&&s._end)?Math.max(0,s._end-s._start):null;
+  return dur==null?"—":(dur/1000).toFixed(0)+"s";
+}
+function paintTime(s){
+  const n=nodeEl[s.id];if(!n)return;
+  const tm=n.querySelector(".n-tm");if(tm)tm.textContent=s.human?gateTxt(s):cardTxt(s);
+}
+/* token chega UMA vez na vida do passo (no SubagentStop). Nunca conta duas
+   vezes, nunca perde: e o unico evento que carrega custo. */
+function addTok(s,tok){
+  if(!tok||s._tokSeen)return;
+  s._tokSeen=true;s._tok=tok;totalTok+=tok;updTok();
+}
+
 const aidRole={};   /* agent_id -> papel */
 const aidStep={};   /* agent_id -> passo (suporta lote paralelo do MESMO papel) */
 const charStep={};  /* papel -> passo onde o personagem esta sentado */
@@ -1031,7 +1055,7 @@ function revertRunning(s){
   s.status="pending";
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
-  s._start=null;s._end=null;s._tools=0;
+  s._start=null;s._end=null;s._tools=0; /* _tok/_tokSeen sobrevivem: token e fato consumado */
   const n=nodeEl[s.id];
   if(n){n.classList.remove("active");const tm=n.querySelector(".n-tm");if(tm)tm.textContent="0s";}
   EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];if(b===s.id&&p)p.classList.remove("lit");});
@@ -1084,17 +1108,19 @@ function bindStep(role,desc,strongOnly){
    SessionEnd, pelo watchdog, pelo reconciliador de inversao de ordem e
    pelo fechamento por inferencia). Aceita pending: um passo que o Stop
    devolveu pra fila tambem pode ser fechado por inferencia. */
-function closeOrphan(s,msgKey){
+function closeOrphan(s,msgKey,tEnd){
   if(s.status!=="running"&&s.status!=="pending")return;
   const wasRunning=s.status==="running";
   clearStopWatch(s);
-  s.status="done";s._end=nowT();
+  /* fechamento por inferencia nao sabe a hora exata do fim: o melhor palpite
+     HONESTO e o ultimo sinal de vida do passo, nunca o relogio de parede —
+     que num F5 recalcula tudo e estica a barra do gantt ate agora. */
+  s.status="done";s._end=tEnd||s._lastEv||s._start||nowT();
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
   const n=nodeEl[s.id];
   if(n){n.classList.remove("active");n.classList.add("done");
-    if(s._start)n.querySelector(".n-tm").textContent=
-      (s._tools||0)+" "+t("actions")+" · "+(Math.max(0,nowT()-s._start)/1000).toFixed(0)+"s";
+    paintTime(s);
     gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
   EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
     if(b===s.id&&p2){p2.classList.remove("lit");p2.classList.add("past");}});
@@ -1283,8 +1309,7 @@ function resolveWaitingGates(){
     s.status="done";s._end=nowT();
     const n=nodeEl[s.id];
     if(n){n.classList.remove("active");n.classList.add("done");
-      if(s._start)n.querySelector(".n-tm").textContent=
-        (Math.max(0,nowT()-s._start)/1000).toFixed(0)+"s";
+      paintTime(s);
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
     EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
       if(b===s.id&&p){p.classList.remove("lit");p.classList.add("past");}});
@@ -1337,7 +1362,7 @@ function route(e){
     const si=steps.indexOf(s);
     steps.forEach((q,qi)=>{
       if(q===s||q.human||q._dyn||q.owner!==role||qi>=si)return;
-      if(q.status==="running"||q.status==="pending")closeOrphan(q,"inferredDone");
+      if(q.status==="running"||q.status==="pending")closeOrphan(q,"inferredDone",q._lastEv||e.t);
     });
     s.status="running";s._start=e.t||Date.now();
     aidStep[aid]=s;
@@ -1388,25 +1413,40 @@ function route(e){
     const s=aidStep[e.aid]||charStep[role]||steps.find(x=>!x.human&&x.owner===role&&x.status==="running");
     if(e.aid)delete aidStep[e.aid];
     if(s&&s._sus){clearTimeout(s._sus);s._sus=null;}
-    if(!s||s.status!=="running"){
+    if(s)clearStopWatch(s);
+    if(!s){
       log(role.replace("-intern",""),t("offPlanEnd"),"rep");
+      chain(role,async()=>{const tk=toks[role];if(tk)tk.el.classList.remove("busy");});
+      return;}
+    /* RECONCILIACAO: o passo pode ter sido devolvido pra fila (Stop) ou fechado
+       por inferencia ANTES deste stop chegar. O stop e a unica fonte de token e
+       do fim real — grava sempre, mesmo fora do estado "running". Descartar
+       aqui era o que sumia com 100k de token por passo. */
+    if(s.status!=="running"){
+      s.status="done";
+      if(e.t&&(!s._end||e.t>s._end))s._end=e.t;
+      addTok(s,e.tok);paintTime(s);
+      const n0=nodeEl[s.id];
+      if(n0&&!s._dyn){n0.classList.remove("active");n0.classList.add("done");
+        gsap.to(n0.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
+      updCnt();
+      log(role.replace("-intern",""),t("finished")(s.id),"rep");
       chain(role,async()=>{const tk=toks[role];if(tk)tk.el.classList.remove("busy");});
       return;}
     /* ---- LOGICA sincrona ---- */
     s.status="done";s._end=e.t||nowT();
-    if(e.tok){s._tok=e.tok;totalTok+=e.tok;updTok();}
+    addTok(s,e.tok);
     if(s._pr){s._pr.remove();s._pr=null;}
-    const finalTxt=(s._tools||0)+" "+t("actions")+" · "+
-      (Math.max(0,(e.t||nowT())-(s._start||e.t))/1000).toFixed(0)+"s"+
-      (e.tok?" · "+fmtTok(e.tok)+" tok":"");
+    const finalTxt=cardTxt(s);
     if(s._dyn){ /* subprocesso: fecha dentro do card de origem */
       s._final=finalTxt;
       const par=stepsById[s.parentId];
       if(par){renderSubs(par);
         if(par.status!=="running"&&nodeEl[par.id])nodeEl[par.id].classList.remove("active");}
     }else{
-      const n=nodeEl[s.id];n.classList.remove("active");n.classList.add("done");
-      if(s._start)n.querySelector(".n-tm").textContent=finalTxt;
+      const n=nodeEl[s.id];if(!n)return;
+      n.classList.remove("active");n.classList.add("done");
+      paintTime(s);
       gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
       EDGES.forEach(([a,b])=>{const p2=pathEl[a+">"+b];
         if(b===s.id){p2.classList.remove("lit");p2.classList.add("past");}});
@@ -1494,8 +1534,7 @@ function route(e){
       }else{
         s.status="done";s._end=e.t||nowT();
         n.classList.remove("active");n.classList.add("done");
-        if(s._start)n.querySelector(".n-tm").textContent=
-          (Math.max(0,(e.t||nowT())-s._start)/1000).toFixed(0)+"s";
+        paintTime(s);
         gsap.to(n.querySelector(".n-check"),{opacity:1,scale:1,duration:.55,ease:"back.out(2.2)"});
         EDGES.forEach(([a,b])=>{const p=pathEl[a+">"+b];
           if(b===s.id){p.classList.remove("lit");p.classList.add("past");}});
@@ -1512,7 +1551,7 @@ function route(e){
     (e.done||[]).forEach(d=>{
       const role=norm(d.sub);if(!role)return;
       const s=bindStep(role,String(d.desc||"").replace(/^[a-z-]+\s*:\s*/i,""),true);
-      if(s&&(s.status==="running"||s.status==="pending"))closeOrphan(s,"reconDone");
+      if(s&&(s.status==="running"||s.status==="pending"))closeOrphan(s,"reconDone",s._lastEv||e.t);
     });return;}
   if(e.ev==="commitref"){ /* commit do passo: vira diff clicavel no dialog do card */
     const s=stepsById[e.id];if(!s)return;
@@ -1560,7 +1599,7 @@ function openCard(s){
     H(LANG==="pt"?"subprocessos (passos extras despachados a partir daqui)":"subprocesses (extra steps dispatched from here)");
     s._subs.forEach(x=>{
       const d=document.createElement("div");d.className="dm sub"+(x.status==="running"?" run":"");
-      const met=x.status==="done"?(x._final||""):
+      const met=x.status==="done"?(x._final||cardTxt(x)):
         ((x._tools||0)+" "+t("actions")+" · "+(Math.max(0,nowT()-(x._start||nowT()))/1000).toFixed(0)+"s");
       d.textContent=(x.status==="done"?"✓ ":"● ")+x.id+" · "+x.owner.replace("-intern","")+" — "+x.title+"  ("+met+")";
       B.appendChild(d);});
