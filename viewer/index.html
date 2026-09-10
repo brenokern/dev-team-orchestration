@@ -1027,6 +1027,7 @@ function hardReset(){
    re-despacha o mesmo passo e o binding colava no seguinte. */
 function revertRunning(s){
   if(s.status!=="running")return;
+  clearStopWatch(s);
   s.status="pending";
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
@@ -1086,6 +1087,7 @@ function bindStep(role,desc,strongOnly){
 function closeOrphan(s,msgKey){
   if(s.status!=="running"&&s.status!=="pending")return;
   const wasRunning=s.status==="running";
+  clearStopWatch(s);
   s.status="done";s._end=nowT();
   if(s._sus){clearTimeout(s._sus);s._sus=null;}
   if(s._pr){s._pr.remove();s._pr=null;}
@@ -1105,6 +1107,26 @@ function closeOrphan(s,msgKey){
   if(charStep[role]&&charStep[role].id===s.id){charStep[role]=null;
     if(tk){tk.el.classList.remove("busy");setPose(tk,"stand");}}
 }
+/* Stop visto com passo rodando: pode ser turno assincrono do Leader (normal)
+   ou ESC no terminal (interrompido). A diferenca e SINAL DE VIDA. Espera o
+   passo ficar mudo por SILENCE_MS antes de devolver pra fila; qualquer tool
+   call do proprio passo renova. SubagentStop/closeOrphan cancelam. */
+const SILENCE_MS=90000;
+function armStopWatch(s,tStop){
+  const alive=()=>Math.max(s._lastEv||0,s._start||0);
+  if(MODE==="replay"){ /* replay: decide na hora, com o tempo do EVENTO */
+    if((tStop||nowT())-alive()>SILENCE_MS)revertRunning(s);
+    return;}
+  clearTimeout(s._sw);
+  const tick=()=>{
+    if(s.status!=="running"){s._sw=null;return;}
+    if(Date.now()-alive()<SILENCE_MS){s._sw=setTimeout(tick,15000);return;}
+    s._sw=null;revertRunning(s);
+  };
+  s._sw=setTimeout(tick,SILENCE_MS);
+}
+function clearStopWatch(s){if(s._sw){clearTimeout(s._sw);s._sw=null;}}
+
 function armSuspect(sOld,role){
   clearTimeout(sOld._sus);
   sOld._sus=setTimeout(()=>{
@@ -1505,12 +1527,13 @@ function route(e){
     return;}
   if(e.ev==="Stop"){
     {
-      /* invariante: dispatch e sincrono — se o Leader falou, nenhum subagente
-         esta vivo. Passo ainda "running" = stop perdido (interrompido no
-         terminal). Fecha os orfaos pra nao prender o personagem na cadeira. */
-      /* Leader falando => nenhum subagente vivo. Passo ainda running foi
-         INTERROMPIDO (nao concluido): volta pra fila pro re-despacho colar. */
-      steps.forEach(s=>{if(s.status==="running"&&!s.human)revertRunning(s);});
+      /* NAO existe invariante "Leader falou => ninguem rodando". Medido em run
+         real: o Agent roda assincrono, o turno do Leader fecha e o Stop chega
+         ~7s DEPOIS do SubagentStart, com o estagiario trabalhando. Derrubar o
+         passo aqui apagava o _start e fazia o SubagentStop (que traz o token,
+         5 min depois) ser recusado como off-plan: card "0s", zero token.
+         Stop agora e SUSPEITA, nao fato: so derruba quem esta em silencio. */
+      steps.forEach(s=>{if(s.status==="running"&&!s.human)armStopWatch(s,e.t);});
       const pending=steps.some(s=>s.status==="pending"||s.status==="running");
       const waiting=steps.some(s=>s.status==="waiting");
       if(waiting){leader(t("pausedGate"),true);return;}
