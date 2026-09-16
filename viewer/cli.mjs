@@ -63,13 +63,24 @@ function resolveFile() {
 }
 const src = resolveFile();
 
+/* inicio da RUN vigente = t do ultimo evento `plan` do log. O ndjson e por
+   SESSAO do Claude Code: duas runs seguidas na mesma sessao moram no mesmo
+   arquivo, entao sem esta marca o reconciliador enxerga os dispatches da run
+   anterior no transcript e fecha passo da run nova com evidencia velha. */
+let runStartT = 0;
+const notePlan = obj => { if (obj && obj.ev === "plan" && obj.t) runStartT = obj.t; };
+
 const readLinesOf = file => {
   try {
     return fs.readFileSync(file, "utf8").split("\n").filter(Boolean)
       .map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
   } catch { return []; }
 };
-const readLines = () => (src.file ? readLinesOf(src.file) : []);
+const readLines = () => {
+  const l = src.file ? readLinesOf(src.file) : [];
+  l.forEach(notePlan);
+  return l;
+};
 
 /* ------- SSE ------- */
 const clients = new Set();
@@ -134,7 +145,7 @@ function startTail() {
       offset = st.size;
       for (const l of buf.toString("utf8").split("\n")) {
         if (!l.trim()) continue;
-        try { broadcast({ type: "event", event: JSON.parse(l) }, lineCount++); } catch {}
+        try { const o = JSON.parse(l); notePlan(o); broadcast({ type: "event", event: o }, lineCount++); } catch {}
       }
     }
   };
@@ -166,6 +177,12 @@ function reconTick() {
     for (const line of fs.readFileSync(tp, "utf8").split("\n")) {
       if (!line.includes("tool_use") && !line.includes("toolUseResult")) continue;
       let o; try { o = JSON.parse(line); } catch { continue; }
+      /* descarta o que e de uma run ANTERIOR desta mesma sessao: o transcript
+         cobre a sessao inteira, o plan-graph cobre so a run vigente */
+      if (runStartT && o.timestamp) {
+        const ts = Date.parse(o.timestamp);
+        if (Number.isFinite(ts) && ts < runStartT) continue;
+      }
       const content = o && o.message && o.message.content;
       if (!Array.isArray(content)) continue;
       for (const c of content) {
@@ -195,11 +212,15 @@ const server = http.createServer((req, res) => {
           const fd = fs.openSync(full, "r");
           const buf = Buffer.alloc(Math.min(st.size, 262144));
           fs.readSync(fd, buf, 0, buf.length, 0); fs.closeSync(fd);
+          let nplans = 0;
           for (const l of buf.toString("utf8").split("\n")) {
             if (!l.includes('"ev":"plan"')) continue;
-            const o = JSON.parse(l);
-            if (o.ev === "plan" && o.plan) { entry.title = o.plan.title || null; entry.steps = (o.plan.steps || []).length; break; }
+            let o; try { o = JSON.parse(l); } catch { continue; }
+            if (o.ev === "plan" && o.plan) { /* fica com a ULTIMA: e a run vigente */
+              nplans++; entry.title = o.plan.title || null; entry.steps = (o.plan.steps || []).length;
+            }
           }
+          if (nplans > 1) entry.runs = nplans;
         } catch {}
         out.push(entry);
       }

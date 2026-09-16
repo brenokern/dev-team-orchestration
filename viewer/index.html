@@ -1363,16 +1363,33 @@ function route(e){
     /* SINCRONO, como toda logica: se o buildGraph ficar pra depois (chain),
        os eventos seguintes do batch rodam sobre steps=[] e viram no-op —
        era o F5 zerando a run inteira */
-    const replan=!!plan;
-    plan=e.plan;
-    if(replan){ /* Leader republicou: reconstroi e reaplica o historico */
+    const antigo=plan;
+    /* FRONTEIRA DE RUN. O log e por SESSAO do Claude Code, nao por run: rodar um
+       segundo plano na mesma sessao APENDA no mesmo ndjson. Sem fronteira, o
+       segundo `plan` reconstruia o grafo e reaplicava o EV_LOG INTEIRO — que
+       ainda tinha os eventos da run anterior. Resultado: passos da run velha
+       renascendo como subprocessos no grafo novo, passos concluidos sozinhos e
+       o Sigma de token somando as duas runs.
+       Regra: plano com outra identidade = RUN NOVA (zera tudo, sem replay).
+       O MESMO plano re-emitido continua sendo re-publicacao (reconstroi e
+       reaplica o historico DESTA run), que e o caso que o replay existia pra
+       cobrir. */
+    const ident=pl=>pl?JSON.stringify([pl.title,(pl.steps||[]).map(x=>x.id+"|"+x.title)]):"";
+    const runNova=antigo&&ident(antigo)!==ident(e.plan);
+    if(runNova){
+      fullReset(); /* limpa EV_LOG, aidRole, lastDispatch, token, stream, palco */
+      plan=e.plan;
+      buildGraph();
+      log("leader",LANG==="pt"?"run nova — palco limpo":"new run — stage cleared");
+    }else if(antigo){ /* re-publicacao do mesmo plano: reconstroi e reaplica */
+      plan=e.plan;
       hardReset();
       buildGraph();
       log("leader",LANG==="pt"?"plan-graph atualizado — reconstruindo":"plan-graph updated — rebuilding");
       const prev=liveMode;liveMode=false;CATCHUP=true;
       try{EV_LOG.forEach(ev=>route(ev));}finally{CATCHUP=false;}
       liveMode=prev;fit();
-    }else buildGraph();
+    }else{plan=e.plan;buildGraph();}
     return;}
   if(!plan){ /* eventos antes do plano: so log do leader */
     /* run inteira sem `emit.mjs plan` (medido: acontece) deixava o viewer em

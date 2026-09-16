@@ -84,6 +84,7 @@ const PROBE = `(() => {
   };
   return {
     steps: st.map(s => ({ id: s.id, status: s.status, human: !!s.human, dyn: !!s._dyn,
+      owner: s.owner || '', parent: s.parentId || null,
       start: s._start || 0, end: s._end || 0, tok: s._tok || 0, tools: s._tools || 0 })),
     times: [...document.querySelectorAll('.node')].map(n => ({
       titulo: (n.querySelector('.n-t') || {}).textContent || '',
@@ -117,11 +118,17 @@ async function rodar(cdp, fixture) {
   fs.mkdirSync(DIR, { recursive: true });
   fs.writeFileSync(path.join(DIR, SESS + ".ndjson"), linhas.join("\n") + "\n");
 
-  /* verdade do LOG: o que o viewer deveria mostrar */
+  /* verdade do LOG: o que o viewer deveria mostrar.
+     ESCOPO = a run vigente. Um ndjson e por SESSAO do Claude Code e pode
+     conter varias runs (cada `plan` abre uma); o viewer so deve mostrar a
+     ultima, entao a verdade esperada comeca no ultimo `plan`. */
+  const ultimoPlano = ev.filter(e => e.ev === "plan").pop() || null;
+  const t0Run = ultimoPlano ? ultimoPlano.t : -Infinity;
+  const papeisDoPlano = new Set(((ultimoPlano && ultimoPlano.plan.steps) || []).map(x => x.owner));
   const stopComTok = new Map();
   const inicio = new Map();
   const aidRole = new Map();
-  for (const e of ev) {
+  for (const e of ev.filter(x => x.t >= t0Run)) {
     if (e.ev === "SubagentStart" && e.aid) { aidRole.set(e.aid, e.agent); inicio.set(e.aid, e.t); }
     if (e.ev === "SubagentStop" && e.tok) stopComTok.set(e.aid, e.tok);
   }
@@ -183,6 +190,13 @@ async function rodar(cdp, fixture) {
   }
   ok(cedo.length === 0, "nenhum passo fechou antes da ultima acao do proprio agente",
     cedo.join(", "));
+
+  /* run anterior nao vaza para o grafo da run vigente */
+  if (papeisDoPlano.size) {
+    const intrusos = a.steps.filter(s => !s.human && s.owner && !papeisDoPlano.has(s.owner));
+    ok(intrusos.length === 0, "nenhum passo de papel fora do roster da run vigente",
+      intrusos.map(s => s.id + " (" + s.owner + ")").join(", "));
+  }
 
   ok(a.alturas.length === 1 && a.alturas[0] !== "auto",
     "todos os cards com a mesma altura (fonts.ready terminou)",

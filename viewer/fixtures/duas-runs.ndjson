@@ -1,0 +1,39 @@
+{"t": 1700000000000, "ev": "plan", "plan": {"title": "Run A — fundação do mock", "roster": [{"id": "frontend-intern", "model": "opus"}, {"id": "frontend-intern", "model": "opus"}, {"id": "frontend-intern", "model": "opus"}], "steps": [{"id": "s1", "title": "0.1 tipos de domínio", "layer": "frontend", "owner": "frontend-intern", "deps": []}, {"id": "s2", "title": "0.2 mapas de status", "layer": "frontend", "owner": "frontend-intern", "deps": ["s1"]}, {"id": "s3", "title": "0.3 fixtures do mock", "layer": "frontend", "owner": "frontend-intern", "deps": ["s2"]}]}}
+{"t": 1700000001500, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: s1 0.1 tipos de domínio", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000002800, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA1"}
+{"t": 1700000014800, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA1", "tool": "Edit", "info": "src/arquivo0.ts"}
+{"t": 1700000026800, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA1", "tool": "Edit", "info": "src/arquivo1.ts"}
+{"t": 1700000038800, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA1", "tool": "Edit", "info": "src/arquivo2.ts"}
+{"t": 1700000041800, "ev": "Stop"}
+{"t": 1700000049800, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA1", "tok": 73791}
+{"t": 1700000051300, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: s2 0.2 mapas de status", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000052600, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA2"}
+{"t": 1700000064600, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA2", "tool": "Edit", "info": "src/arquivo0.ts"}
+{"t": 1700000076600, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA2", "tool": "Edit", "info": "src/arquivo1.ts"}
+{"t": 1700000088600, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA2", "tool": "Edit", "info": "src/arquivo2.ts"}
+{"t": 1700000091600, "ev": "Stop"}
+{"t": 1700000099600, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA2", "tok": 58802}
+{"t": 1700000101100, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: s3 0.3 fixtures do mock", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000102400, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA3"}
+{"t": 1700000114400, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA3", "tool": "Edit", "info": "src/arquivo0.ts"}
+{"t": 1700000126400, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA3", "tool": "Edit", "info": "src/arquivo1.ts"}
+{"t": 1700000138400, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA3", "tool": "Edit", "info": "src/arquivo2.ts"}
+{"t": 1700000141400, "ev": "Stop"}
+{"t": 1700000149400, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "aA3", "tok": 269204}
+{"t": 1700000151400, "ev": "Stop"}
+{"t": 1700000751400, "ev": "plan", "plan": {"title": "Run B — backend de novidades", "roster": [{"id": "backend-intern", "model": "opus"}, {"id": "backend-intern", "model": "opus"}, {"id": "backend-intern", "model": "opus"}], "steps": [{"id": "s1", "title": "1.1 predicado único de audiência", "layer": "backend", "owner": "backend-intern", "deps": []}, {"id": "s2", "title": "1.2 corpo: tempo de leitura e imagens", "layer": "backend", "owner": "backend-intern", "deps": ["s1"]}, {"id": "s3", "title": "1.3 regra de badge", "layer": "backend", "owner": "backend-intern", "deps": ["s2"]}]}}
+{"t": 1700000752900, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s1 1.1 predicado único de audiência", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000754200, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aB1"}
+{"t": 1700000766200, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB1", "tool": "Edit", "info": "src/arquivo0.ts"}
+{"t": 1700000778200, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB1", "tool": "Edit", "info": "src/arquivo1.ts"}
+{"t": 1700000790200, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB1", "tool": "Edit", "info": "src/arquivo2.ts"}
+{"t": 1700000793200, "ev": "Stop"}
+{"t": 1700000801200, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aB1", "tok": 55900}
+{"t": 1700000802700, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s2 1.2 corpo: tempo de leitura e imagens", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000804000, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aB2"}
+{"t": 1700000816000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB2", "tool": "Edit", "info": "src/arquivo0.ts"}
+{"t": 1700000828000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB2", "tool": "Edit", "info": "src/arquivo1.ts"}
+{"t": 1700000840000, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aB2", "tool": "Edit", "info": "src/arquivo2.ts"}
+{"t": 1700000843000, "ev": "Stop"}
+{"t": 1700000851000, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aB2", "tok": 58100}
+{"t": 1700000853000, "ev": "Stop"}
