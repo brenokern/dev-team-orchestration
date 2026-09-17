@@ -126,33 +126,48 @@ fagulha na aresta ao concluir. Acrescentado: o rail animado. Retirado: pulso na 
 **`prefers-reduced-motion` passa a ser respeitado** (hoje não é): rail estático, sem walk
 interpolado — o personagem simplesmente aparece na mesa.
 
-## 4. Personagens
+## 4. Personagens — implementado na branch (v3, estilo pixel-agents)
 
-### A — pixel art, 16×32, ~4 cabeças (recomendada)
+A primeira rodada (v2, `sprites-v2.json`, pernas grossas e proporção "de frente") foi
+descartada depois da sua revisão. A referência passou a ser o **Pixel Agents** que você já roda
+no VS Code: personagens do pack *JIK-A-4 Metro City* (MIT no repo do pixel-agents; aqui o
+estilo é reproduzido, não copiado), 16×32 em vista 3/4 top-down.
 
-- Grade 16×32 renderizada a 2px (32×64 na tela, contra 36×51 hoje). Cabeça 8 linhas de 32:
-  proporção de adulto legível nessa resolução (o "modelo de 6 cabeças" do Slynyrd é para
-  sprites maiores; a 32px, 4 cabeças é onde o rosto ainda tem olhos).
-- Guarda-roupa neutro nos tokens do tema (`--sp-shirt`, `--sp-pants`); cabelo em tons reais
-  (preto, castanho, grisalho, loiro-cinza); três tons de pele — um time adulto e variado.
-- **O papel sai do cabelo e vai para o cordão do crachá**: uma linha de 3px descendo pelo peito,
-  na cor do papel dessaturada (`hsl(h 35% 55%)` em vez de `55% 66%`). Continua identificável no
-  roster, deixa de gritar no palco.
-- Leader: cabelo grisalho claro (como hoje), cordão verde.
-- **Mesmo contrato** `sprite(rows, palette, px, flip)`: são novas linhas de texto e uma paleta.
-  Poses `stand / walk0 / walk1 / sit / sitback` autoradas e validadas em `sprites-v2.json`.
-  `mkTok`, `walk`, `setPose`, `sitCouch`, `think` não mudam.
+O que define o estilo, e foi reproduzido em `sprites-v3/`:
+- **sem contorno preto** — a borda é o tom mais escuro do próprio material;
+- **3 tons por material** (cabelo com brilho, pele com sombra, camisa com luz);
+- cabeça redonda grande (~10 linhas), corpo curto, pernas de 3px com vão de 2px — é a proporção
+  do pack, não a "adulta" da v2; o que faz parecer adulto é o acabamento, não a anatomia;
+- guarda-roupa real: marinho, carvão, off-white, oxblood, oliva; jeans, cáqui, calça escura;
+- 4 variantes de cabelo (curto, bob, cacheado, raspado) × 5 cores; 3 tons de pele. Os 9 papéis
+  + leader estão na tabela `V3ROLES`; papel novo no roster sorteia variantes por hash do nome;
+- o papel aparece **só no cordão do crachá** (3px pelo peito, cor dessaturada).
 
-### B — silhuetas vetoriais (avaliada e rejeitada)
+Poses e animação — mesma lógica do viewer, mais cuidado com o sentar:
+- `stand` (frente) · `walk0/1/2` (lateral; ciclo 0-1-2-1 a 150ms, como o pack) ·
+  `type0/type1` (de costas, teclando). `sit` e `sitback` do código antigo mapeiam para `type`.
+- **Sentar deriva da mesa, não do card.** `SEAT(s)` e `CHAIR(s)` são calculados a partir de
+  `DESK(s)` com deslocamentos fixos em pixels de sprite (`SIT_DX/SIT_DY`, `CHAIR_DX/CHAIR_DY`).
+  Geometria, como no pixel-agents: topo do personagem = topo da mesa + 14 linhas — a cabeça fica
+  sobre a metade de baixo da mesa (em frente ao monitor), o tronco já abaixo dela, e o **encosto
+  da cadeira (z-index 7) cobre o quadril**. É o encosto na frente que faz "sentado" ler como
+  sentado. Ao sentar, `gsap.set(y:0)` zera qualquer resto do `bob()` — era isso que abria um vão
+  entre tronco e encosto.
+- Teclar: trabalhando = quadros a 300ms; **AFK** = rajadas de ~500ms com pausas aleatórias de
+  3–7s. Um único timer por personagem (`startType/stopType`), zerado em qualquer outra pose.
 
-Figuras de escala de maquete, monocromáticas. É o mais sóbrio possível — e no mockup ficou
-claro por quê não: lê-se como pictograma de banheiro. Perde expressão (feliz/triste), perde o
-charme que faz alguém querer deixar a aba aberta. Fica registrada como o extremo do espectro.
+**Sofá e TV saíram. Entraram baias.** Um bloco 3×3 de mesas à esquerda; cada papel tem baia fixa
+(ordem do roster). Todo mundo começa na sua baia teclando meio AFK; quem é despachado caminha
+até a mesa do passo; ao terminar, volta para a mesma baia. O status do roster `na tv` virou
+`na baia`. O `sitCouch` continua existindo como nome (aliás `sitBay`) para não tocar nos
+chamadores.
 
-### C — sem personagens (provocação)
+Verificado em chromium headless: chegada exata em `SEAT(s3)` depois de uma caminhada de
+1.240px; AFK alternando quadros nas baias; teclado a 300ms na mesa; F5 preserva assentos.
+As 150 checagens do `viewer/test.mjs` continuam passando — a máquina de estados não foi tocada.
 
-Monogramas de papel (`BE`, `FE`, `QA`) se movendo entre mesas. Minimalismo máximo, mas o
-"escritório" é a razão de ser do team-view; sem ele é um Gantt com passos. Descartada.
+Screenshots: `v3-palco-*.png`, `v3-sentado-*.png`, `v3-sprites-*.png`. Para regerar o patch:
+`python3 docs/viewer-v2/sprites-v3/patch_v3.py viewer/index.html` (parte do `index.html` da main).
 
 ## 5. Ferramentas de animação avaliadas
 
@@ -188,8 +203,8 @@ valendo — nenhuma depende de CSS) e com screenshots dark/light.
 
 ## 7. Decisões que são suas
 
-1. **A ou B** para os personagens (recomendo A; B está no mockup para você ver o extremo).
-2. **Banco sem TV** ou manter a TV como piada interna do time (`na tv`)?
+1. ~~A ou B~~ — decidido: estilo pixel-agents (v3), já na branch.
+2. ~~Banco sem TV~~ — decidido: baias 3×3 com AFK.
 3. **Grade pontilhada** no palco ou fundo liso?
 4. O segmentado `fluxo | gantt | runs` substitui os chips — ou você quer o Gantt como painel
    lateral inferior permanente, já que agora ele é o mesmo desenho dos cards?

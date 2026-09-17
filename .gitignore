@@ -9,3 +9,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# pasta que o app Claude cria ao entregar arquivos na pasta conectada
+Claude outputs/

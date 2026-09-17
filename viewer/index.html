@@ -211,16 +211,13 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .tok{position:absolute;z-index:6;pointer-events:none;
   display:flex;flex-direction:column;align-items:center;gap:2px}
 .tok .hold-sp{position:relative;display:block}
-.tok .hold-sp::after{content:"";position:absolute;left:50%;bottom:-2px;width:30px;height:7px;
-  transform:translateX(-50%);border-radius:50%;z-index:-1;
-  background:radial-gradient(ellipse at center,var(--shad),transparent 68%)}
-.tok .badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;
-  font-family:"Geist Mono",monospace;font-size:8px;letter-spacing:.06em;
-  background:var(--live);color:var(--bg);border-radius:999px;padding:1px 6px;opacity:0;
-  transition:opacity .4s var(--ease);white-space:nowrap}
-.tok.busy .badge{opacity:1}
-.tok.lead .badge{background:var(--txt);opacity:1}
+.tok .badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:-6px;
+  font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.06em;
+  color:var(--dim);opacity:0;transition:opacity .4s var(--ease);white-space:nowrap}
+.tok.busy .badge{opacity:1;color:var(--live)}
+.tok.lead .badge{opacity:1;color:var(--txt)}
 .furn{position:absolute;z-index:2;pointer-events:none}
+.furn.chair{z-index:7} /* encosto NA FRENTE do personagem sentado */
 .furn svg{position:relative;z-index:1}
 .fshadow{position:absolute;z-index:0;border-radius:50%;
   background:radial-gradient(ellipse at center,var(--shad),transparent 68%)}
@@ -447,7 +444,7 @@ const STR={
   noPlan:"o time começou a trabalhar, mas nenhum plan-graph foi publicado — o palco fica vazio. Rode /dev-team-orchestration:run-visual, ou peça ao Leader o `emit.mjs plan`.",
   offPlanEnd:"encerrou (fora do plan-graph)",
   approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
-  natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
+  natv:"na baia",active:"ativo",waiting:"aguardando",actions:"ações",
   interrupted:"encerrado sem stop (interrompido no terminal)",
   ended:"sessão encerrada no terminal",
   requeued:"interrompido — de volta para a fila",
@@ -479,7 +476,7 @@ const STR={
   noPlan:"the team started working but NO plan-graph was published — the stage stays empty. Use /dev-team-orchestration:run-visual, or ask the Leader for `emit.mjs plan`.",
   offPlanEnd:"finished (outside the plan-graph)",
   approved:"approved — the team moves on",teamEnd:"team finished.",you:"you",
-  natv:"watching tv",active:"active",waiting:"waiting",actions:"actions",
+  natv:"at their bay",active:"active",waiting:"waiting",actions:"actions",
   interrupted:"closed without stop (interrupted in the terminal)",
   ended:"session ended in the terminal",
   requeued:"interrupted — back in the queue",
@@ -506,93 +503,71 @@ function applyLang(){
   const emp=$("#empty");if(emp)emp.innerHTML=t("empty");
 }
 
-/* ================= pixel art ================= */
-const OUT="#16161c",SKIN="#e8c39e",SKIN2="#d4a87f",EYE="#141416",MOUTH="#8f4a3c",
-      SHOE="#141417",TEAR="#5fc4ff",
-      WOODL="#c99b66",WOODD="#a87944",WOODF="#7a5533",BEIGE="#d8d3cc",CASE="#20242b",
-      SOFA="#c14b66",SOFA2="#d3617a",SOFA3="#8f2d49",
-      LEAF="#3f7d4e",LEAF2="#2c5c3a",POT="#b06a3e",POT2="#8f5230";
-const HEAD=["...OOOOOO...","..OHHHHHHO..",".OHHHHHHHHO.",".OHhhhhhhHO."];
-const FACE={
- ok: [".OSSSSSSSSO.",".OSESSSSESO.",".OSSSSSSSSO.",".OSsMMMMsSO.","..OSSSSSSO.."],
- sad:[".OSSSSSSSSO.",".OSESSSSESO.",".OSTSSSSSSO.",".OSMSSSSMSO.","..OSSSSSSO.."]};
-const BODY={
- stand:["..OBBBBBBO..",".OBBAAAABBO.",".OBBAAAABBO.",".ObBBBBBBbO.","..OBB..BBO..","..OBB..BBO..","..ODD..DDO..","...OO..OO..."],
- walk0:["..OBBBBBBO..",".OBBAAAABBO.",".OBBAAAABBO.",".ObBBBBBBbO.",".OBB....BBO.",".OBB....BBO.",".ODD....DDO.","..OO....OO.."],
- walk1:["..OBBBBBBO..",".OBBAAAABBO.",".OBBAAAABBO.",".ObBBBBBBbO.","...OBBBBO...","..OBB..BBO..","..ODD..DDO..","...OO..OO..."],
- sit:  ["..OBBBBBBO..",".OBBAAAABBO.",".ObBBBBBBbO.","..OBB..BBO..","..ODD..DDO..","...OO..OO..."]};
-const SITBACK=["...OOOOOO...","..OHHHHHHO..",".OHHHHHHHHO.",".OHHHHHHHHO.",".OHhhhhhhHO.",".OhHHHHHHhO.","..OSSSSSSO..","..OBBBBBBO..",".ObBBBBBBbO.",".OBBBBBBBBO.",".OBBBBBBBBO.","..OOOOOOOO.."];
-function sprite(a,pose,mood,px,flip){
-  const rows=pose==="sitback"?SITBACK:[...HEAD,...(FACE[mood]||FACE.ok),...BODY[pose]];
-  const C={O:OUT,H:a.h,h:a.a,S:SKIN,s:SKIN2,E:EYE,M:MOUTH,A:a.a,D:SHOE,T:TEAR};
+/* ================= pixel art v3 — estilo Metro City / pixel-agents =================
+   16x32 em vista 3/4, sem contorno preto, 3 tons por material. Dados em V3 (poses por
+   variante de cabelo), V3PAL (materiais), V3ROLES (papel -> cabelo, pele, camisa, calca).
+   O contrato continua sprite(a,pose,mood,px,flip): 'mood' e ignorado — ninguem mais fica
+   triste no sofa; quem nao esta no fluxo trabalha na sua baia. */
+const V3={"short":{"stand":["................","......hhhh......","....hhHHHHhh....","...hHH++HHHHh...","...hH+HHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHhSSSSSSHhh..","..hHSSSSSSSSHh..","...hSSESSSESh...","...hSSSSSSSSh...","....sSSSSSSs....",".....ssSSss.....","......sSSs......","....bBB^^BBb....","...bBBBAABBBb...","...bBBBBABBBBb..","..sbBBBBABBBBbs.","..SbBBBBBBBBbS..","..SbBBBBBBBBbS..","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPppPPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....DDD..DDD....","....DDD..DDD....","................","...____..____..."],"walk0":["................","......hhhh......","....hhHHHHhh....","...hHHH++HHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHHHhSSSSSh...","..hHHHSSSSSSs...","...hHHSSSESSs...","...hHhSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBbS..","....bBBBBBBBbs..","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPpPPPp....","...pPPp..PPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"walk1":["................","......hhhh......","....hhHHHHhh....","...hHHH++HHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHHHhSSSSSh...","..hHHHSSSSSSs...","...hHHSSSESSs...","...hHhSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBb...","....bBBBBBBBbS..","....bBBBBBBBbs..","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....DDDDDD.....",".....DDDDDD.....","................",".....______....."],"walk2":["................","......hhhh......","....hhHHHHhh....","...hHHH++HHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHHHhSSSSSh...","..hHHHSSSSSSs...","...hHHSSSESSs...","...hHhSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","..SbBBBABBBb....","..sbBBBBBBBb....","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPPpPPp....","...pPPP..pPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"type0":["................","......hhhh......","....hhHHHHhh....","...hHHHHHHHHh...","...hHH+HHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hhHHHHHHHHhh..","...hhHHHHHHhh...","....hhhhhhhh....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"],"type1":["................","......hhhh......","....hhHHHHhh....","...hHHHHHHHHh...","...hHH+HHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hhHHHHHHHHhh..","...hhHHHHHHhh...","....hhhhhhhh....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"]},"bob":{"stand":["................","......hhhh......","....hhHHHHhh....","...hHH++HHHHh...","..hHH+HHHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHhSSSSSSHhHh.",".hHHSSSSSSSSHHh.",".hHHSSESSSESHHh.",".hhhSSSSSSSShhh.","....sSSSSSSs....",".....ssSSss.....","......sSSs......","....bBB^^BBb....","...bBBBAABBBb...","...bBBBBABBBBb..","..sbBBBBABBBBbs.","..SbBBBBBBBBbS..","..SbBBBBBBBBbS..","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPppPPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....DDD..DDD....","....DDD..DDD....","................","...____..____..."],"walk0":["................","......hhhh......","....hhHHHHhh....","...hHH++HHHHh...","..hHH+HHHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHhSSSSSSHhHh.",".hHHSSSSSSSSHHh.",".hHHSSESSSESHHh.",".hhhSSSSSSSShhh.","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBbS..","....bBBBBBBBbs..","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPpPPPp....","...pPPp..PPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"walk1":["................","......hhhh......","....hhHHHHhh....","...hHH++HHHHh...","..hHH+HHHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHhSSSSSSHhHh.",".hHHSSSSSSSSHHh.",".hHHSSESSSESHHh.",".hhhSSSSSSSShhh.","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBb...","....bBBBBBBBbS..","....bBBBBBBBbs..","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....DDDDDD.....",".....DDDDDD.....","................",".....______....."],"walk2":["................","......hhhh......","....hhHHHHhh....","...hHH++HHHHh...","..hHH+HHHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHhSSSSSSHhHh.",".hHHSSSSSSSSHHh.",".hHHSSESSSESHHh.",".hhhSSSSSSSShhh.","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","..SbBBBABBBb....","..sbBBBBBBBb....","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPPpPPp....","...pPPP..pPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"type0":["................","......hhhh......","....hhHHHHhh....","...hHHHHHHHHh...","..hHHH+HHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hhHHHHHHHHHHhh.","..hhhhhhhhhhhh..",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"],"type1":["................","......hhhh......","....hhHHHHhh....","...hHHHHHHHHh...","..hHHH+HHHHHHh..","..hHHHHHHHHHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hhHHHHHHHHHHhh.","..hhhhhhhhhhhh..",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"]},"curly":{"stand":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHH+HHH+HHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHhSSSSSSHhh..","..hHSSSSSSSSHh..","...hSSESSSESh...","...hSSSSSSSSh...","....sSSSSSSs....",".....ssSSss.....","......sSSs......","....bBB^^BBb....","...bBBBAABBBb...","...bBBBBABBBBb..","..sbBBBBABBBBbs.","..SbBBBBBBBBbS..","..SbBBBBBBBBbS..","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPppPPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....DDD..DDD....","....DDD..DDD....","................","...____..____..."],"walk0":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHH+HHH+HHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHhSSSSSSHhh..","..hHSSSSSSSSHh..","...hSSESSSESh...","...hSSSSSSSSh...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBbS..","....bBBBBBBBbs..","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPpPPPp....","...pPPp..PPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"walk1":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHH+HHH+HHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHhSSSSSSHhh..","..hHSSSSSSSSHh..","...hSSESSSESh...","...hSSSSSSSSh...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBb...","....bBBBBBBBbS..","....bBBBBBBBbs..","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....DDDDDD.....",".....DDDDDD.....","................",".....______....."],"walk2":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHH+HHH+HHHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHhSSSSSSHhh..","..hHSSSSSSSSHh..","...hSSESSSESh...","...hSSSSSSSSh...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","..SbBBBABBBb....","..sbBBBBBBBb....","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPPpPPp....","...pPPP..pPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"type0":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHHH+HHH+HHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHHHHHHHHHHh..","...hhHHHHHHhh...","....hhhhhhhh....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"],"type1":["................",".....hhhhhh.....","...hhHHHHHHhh...","..hHHH+HHH+HHh..",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.",".hHHHHHHHHHHHHh.","..hHHHHHHHHHHh..","...hhHHHHHHhh...","....hhhhhhhh....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"]},"buzz":{"stand":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHsSSSSSSSsh..","..sSSSSSSSSSSs..","...sSSESSSESs...","...sSSSSSSSSs...","....sSSSSSSs....",".....ssSSss.....","......sSSs......","....bBB^^BBb....","...bBBBAABBBb...","...bBBBBABBBBb..","..sbBBBBABBBBbs.","..SbBBBBBBBBbS..","..SbBBBBBBBBbS..","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPppPPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....pPP..PPp....","....DDD..DDD....","....DDD..DDD....","................","...____..____..."],"walk0":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHsSSSSSSSsh..","..sSSSSSSSSSSs..","...sSSESSSESs...","...sSSSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBbS..","....bBBBBBBBbs..","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPpPPPp....","...pPPp..PPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"walk1":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHsSSSSSSSsh..","..sSSSSSSSSSSs..","...sSSESSSESs...","...sSSSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","....bBBBABBBb...","....bBBBBBBBbS..","....bBBBBBBBbs..","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....pPPPPp.....",".....DDDDDD.....",".....DDDDDD.....","................",".....______....."],"walk2":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHsSSSSSSSsh..","..sSSSSSSSSSSs..","...sSSESSSESs...","...sSSSSSSSSs...","....ssSSSSSs....",".....sSSSss.....","......sSSs......",".....bBBBBb.....","....bBBBABBb....","....bBBBABBBb...","..SbBBBABBBb....","..sbBBBBBBBb....","....bBBBBBBBb...","....bbBBBBBbb...",".....pPPPPp.....",".....pPPPPp.....","....pPPPpPPp....","...pPPP..pPPp...","...pPP....PPp...","..pPP......PPp..","..pPP......PPp..","..DDD......DDD..","..DDD......DDD..","................","..____....____.."],"type0":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hhHHHHHHHHhh..","...hhhHHHHhhh...","....sSSSSSSs....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"],"type1":["................","................",".....hhhhhh.....","....hHHHHHHh....","...hHHHHHHHHh...","...hHHHHHHHHh...","..hHHHHHHHHHHh..","..hHHHHHHHHHHh..","..hhHHHHHHHHhh..","...hhhHHHHhhh...","....sSSSSSSs....",".....sSSSSs.....","......sSSs......","....bBBBBBBb....","...bBBBBBBBBb...","..bBBBBBBBBBBb..",".SbBBBBBBBBBBbS.",".sbBBBBBBBBBBbs.","...bBBBBBBBBb...","...bBBBBBBBBb...","...bbBBBBBBbb...","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","....pPPPPPPp....","................","................","................","................","................","................","................"]}};
+const V3PAL={"skin":{"claro":["#efc9a6","#d5a57e"],"medio":["#c98c5e","#a86f44"],"escuro":["#8a5a3c","#6b4028"]},"hair":{"preto":["#2b2422","#3d3431","#57504c"],"castanho":["#4a3428","#6b4a35","#8a6547"],"loiro":["#8a6d3b","#b8965a","#d9bb7d"],"grisalho":["#6e6e78","#9a9aa4","#c9c9d1"],"branco":["#a9a9b3","#d6d6de","#f1f1f5"]},"shirt":{"marinho":["#1f2a44","#2f3f66","#44568a"],"carvao":["#242428","#36363d","#4a4a53"],"offwhite":["#b9b3a8","#e2dccf","#f4efe4"],"oxblood":["#4a1f22","#6e2c31","#8c3c42"],"oliva":["#3b4a2a","#526638","#6c8449"]},"pants":{"escura":["#1c1c22","#2c2c34"],"jeans":["#2b3a55","#3b4f74"],"caqui":["#6d5c3f","#8a7653"]},"shoe":"#1a1a1f"};
+const V3ROLES={"data-intern":["short","castanho","claro","marinho","escura"],"backend-intern":["buzz","preto","escuro","carvao","jeans"],"ai-intern":["curly","preto","medio","oliva","escura"],"frontend-intern":["bob","loiro","claro","offwhite","jeans"],"infra-intern":["short","grisalho","medio","carvao","caqui"],"qa-intern":["bob","preto","medio","oxblood","escura"],"ux-intern":["curly","castanho","escuro","offwhite","caqui"],"reviewer-intern":["short","grisalho","claro","marinho","escura"],"pr-writer-intern":["buzz","castanho","medio","oliva","jeans"],"leader":["short","branco","claro","carvao","escura"]};
+const DESK_ROWS=["........kkkkkkkkkk..........",".......kKKKKKKKKKKk.........",".......kKggggggggKk.........",".......kKgGGggggGKk.........",".......kKggggggggKk.........",".......kKggggggggKk.........",".......kKKKKKKKKKKk.........","........kkkkkkkkkk..........","...........kKKk.............","..........kKKKKk............","vvvvvvvvvvvvvvvvvvvvvvvvvvvv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vWWWWWWWWkKKKKKKKKkWWWWWWWWv","vWWWWWWWWkKKKKKKKKkWWWWWWWWv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vWWWWWWWWWWWWWWWWWWWWWWWWWWv","vwwwwwwwwwwwwwwwwwwwwwwwwwwv","vwwwwwwwwwwwwwwwwwwwwwwwwwwv","vwwwwwwwwwwwwwwwwwwwwwwwwwwv","vvvvvvvvvvvvvvvvvvvvvvvvvvvv","..vvv....................vvv","..vvv....................vvv","..vvv....................vvv","..vvv....................vvv","._____________________..____"],CHAIR_ROWS=[".vvvvvvvvvvvv.","vWWWWWWWWWWWWv","vWWWWWWWWWWWWv","vwwwwwwwwwwwwv","vwwwwwwwwwwwwv",".vvvvvvvvvvvv."],FURN_PAL={"k":"#b9b3a6","K":"#d8d3cc","g":"#2f6b4a","G":"#5fae86","W":"#c99b66","w":"#a87944","v":"#7a5533","_":"rgba(0,0,0,.28)"};
+const SPX=3;                       /* escala do pixel: 16x32 -> 48x96 na tela */
+const SPR_W=16*SPX,SPR_H=32*SPX;
+/* pixels -> <rect>. Materiais que seguem o TEMA (contorno/roupa dos sprites antigos)
+   sumiram: aqui cada material tem cor propria, como no pack. */
+function pix(rows,pal,px,W,flip){
   let r="";
-  rows.forEach((row,y)=>{for(let x=0;x<row.length;x++){
-    const c=row[x];if(c===".")continue;
-    r+= c==="B"?`<rect x="${x}" y="${y}" width="1" height="1" style="fill:var(--body)"/>`
-      : c==="b"?`<rect x="${x}" y="${y}" width="1" height="1" style="fill:var(--body2)"/>`
-      :`<rect x="${x}" y="${y}" width="1" height="1" fill="${C[c]||SKIN}"/>`;}});
-  return `<svg class="sp" width="${12*px}" height="${rows.length*px}" viewBox="0 0 12 ${rows.length}"
-    shape-rendering="crispEdges" aria-hidden="true"${flip?' style="transform:scaleX(-1)"':''}>${r}</svg>`;
+  rows.forEach((row,y)=>{for(let x=0;x<row.length;x++){const c=row[x];if(c===".")continue;
+    const f=pal[c];if(!f)continue;
+    r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`;}});
+  return `<svg class="sp" width="${W*px}" height="${rows.length*px}" viewBox="0 0 ${W} ${rows.length}" shape-rendering="crispEdges" aria-hidden="true"${flip?' style="transform:scaleX(-1)"':''}>${r}</svg>`;
 }
-const R=(x,y,w,h,f)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"/>`;
-function deskSvg(){
-  return `<svg class="sp" width="66" height="48" viewBox="0 0 22 16" shape-rendering="crispEdges" aria-hidden="true">
-   ${R(11,0,9,9,OUT)}${R(12,1,7,6,BEIGE)}<rect x="13" y="2" width="5" height="4" class="tvscr"/>
-   ${R(12,7,7,1,"#b9b3a6")}${R(14,8,3,1,BEIGE)}
-   ${R(1,7,9,2,OUT)}${R(2,7.2,7,1,BEIGE)}
-   ${R(0,9,22,5,OUT)}${R(1,10,20,2,WOODL)}${R(1,12,20,1,WOODD)}
-   ${R(2,14,3,2,OUT)}${R(3,14,1,2,WOODF)}${R(17,14,3,2,OUT)}${R(18,14,1,2,WOODF)}</svg>`;
+/* paleta de um papel: papel conhecido usa a tabela; papel novo (roster extra) sorteia
+   variantes pelo hash do nome — deterministico, sem repetir a cada carga */
+const HAIRS=Object.keys(V3);
+function styleOf(role){
+  if(V3ROLES[role])return V3ROLES[role];
+  let h=0;for(const c of role)h=(h*31+c.charCodeAt(0))>>>0;
+  const pick=(o,k)=>{const ks=Object.keys(o);return ks[k%ks.length];};
+  return [HAIRS[h%HAIRS.length],pick(V3PAL.hair,h>>2),pick(V3PAL.skin,h>>4),pick(V3PAL.shirt,h>>6),pick(V3PAL.pants,h>>8)];
 }
-function couchSvg(){
-  let seams="";for(let x=15;x<75;x+=12)seams+=R(x,9,1,4,SOFA3);
-  return `<svg class="sp" width="270" height="60" viewBox="0 0 90 20" shape-rendering="crispEdges" aria-hidden="true">
-   ${R(4,0,82,16,OUT)}${R(5,1,80,7,SOFA)}${R(5,1,80,1,SOFA2)}
-   ${R(5,8,80,4,SOFA2)}${seams}${R(5,12,80,3,SOFA3)}
-   ${R(0,2,5,16,OUT)}${R(1,3,3,13,SOFA)}${R(1,3,3,1,SOFA2)}
-   ${R(85,2,5,16,OUT)}${R(86,3,3,13,SOFA)}${R(86,3,3,1,SOFA2)}
-   ${R(6,16,3,3,OUT)}${R(7,16,1,3,WOODF)}${R(81,16,3,3,OUT)}${R(82,16,1,3,WOODF)}</svg>`;
+function paletteOf(role,accent){
+  const [hair,hc,sk,sh,pt]=styleOf(role);
+  const H=V3PAL.hair[hc],S=V3PAL.skin[sk],B=V3PAL.shirt[sh],P=V3PAL.pants[pt];
+  return {hair,pal:{h:H[0],H:H[1],"+":H[2],s:S[1],S:S[0],E:"#1a1a1f",b:B[0],B:B[1],"^":B[2],
+    p:P[0],P:P[1],D:V3PAL.shoe,A:accent,_:"rgba(0,0,0,.28)"}};
 }
-function tvSvg(){
-  return `<svg class="sp" width="78" height="78" viewBox="0 0 26 26" shape-rendering="crispEdges" aria-hidden="true">
-   ${R(4,1,17,16,OUT)}${R(5,2,15,14,CASE)}
-   ${R(7,4,9,1,"#2a2e38")}${R(7,6,9,1,"#2a2e38")}${R(7,8,9,1,"#2a2e38")}
-   ${R(9,11,5,3,"#2a2e38")}${R(10,12,3,1,"#161a1f")}
-   <rect x="20" y="2" width="1" height="14" class="tvscr"/>
-   ${R(11,17,4,2,OUT)}
-   ${R(2,19,22,5,OUT)}${R(3,20,20,2,WOODL)}${R(3,22,20,1,WOODD)}
-   ${R(4,24,2,2,OUT)}${R(19,24,2,2,OUT)}</svg>`;
-}
-function plantSvg(){
-  return `<svg class="sp" width="36" height="51" viewBox="0 0 12 17" shape-rendering="crispEdges" aria-hidden="true">
-   ${R(2,0,3,5,OUT)}${R(7,1,3,4,OUT)}${R(4,2,4,5,OUT)}
-   ${R(3,1,1,3,LEAF)}${R(8,2,1,2,LEAF)}${R(5,3,2,3,LEAF)}${R(5,3,1,1,LEAF2)}${R(8,3,1,1,LEAF2)}${R(3,3,1,1,LEAF2)}
-   ${R(2,7,8,2,OUT)}${R(3,7.5,6,1,POT)}
-   ${R(3,9,6,7,OUT)}${R(4,10,4,5,POT)}${R(4,10,1,5,POT2)}${R(4,15,4,1,POT2)}</svg>`;
-}
-function tableSvg(){
-  return `<svg class="sp" width="54" height="30" viewBox="0 0 18 10" shape-rendering="crispEdges" aria-hidden="true">
-   ${R(8,0,3,3,OUT)}${R(9,0.5,1,1.5,"#e8e4da")}${R(11,1,1,1,OUT)}
-   ${R(1,3,16,4,OUT)}${R(2,4,14,1,WOODL)}${R(2,5,14,1,WOODD)}
-   ${R(3,7,2,3,OUT)}${R(13,7,2,3,OUT)}${R(3.5,7,1,3,WOODF)}${R(13.5,7,1,3,WOODF)}</svg>`;
-}
-
-/* ================= known roster colors (fallback: hash hue) ================= */
-const KNOWN={
- "data-intern":{h:"#5DCAA5",a:"#1D9E75"},"backend-intern":{h:"#7F77DD",a:"#534AB7"},
- "ai-intern":{h:"#85B7EB",a:"#378ADD"},"frontend-intern":{h:"#ED93B1",a:"#D4537E"},
- "infra-intern":{h:"#EF9F27",a:"#BA7517"},"qa-intern":{h:"#97C459",a:"#639922"},
- "ux-intern":{h:"#F0997B",a:"#D85A30"},"reviewer-intern":{h:"#B4B2A9",a:"#5F5E5A"},
- "pr-writer-intern":{h:"#F4C0D1",a:"#D4537E"}};
-const LEADER={id:"leader",h:"#e4e4e9",a:"#34d399"};
+/* cordao do cracha: a cor do papel, dessaturada — e o unico lugar onde o papel aparece no corpo */
+const KNOWN_ACC={"data-intern":"hsl(200 30% 58%)","backend-intern":"hsl(262 30% 60%)","ai-intern":"hsl(170 30% 50%)",
+  "frontend-intern":"hsl(330 30% 60%)","infra-intern":"hsl(30 35% 55%)","qa-intern":"hsl(45 40% 55%)",
+  "ux-intern":"hsl(300 25% 60%)","reviewer-intern":"hsl(210 20% 62%)","pr-writer-intern":"hsl(90 25% 55%)"};
 function colorOf(role){
-  if(KNOWN[role])return KNOWN[role];
+  if(KNOWN_ACC[role])return {h:KNOWN_ACC[role],a:KNOWN_ACC[role]};
   let h=0;for(const c of role)h=(h*31+c.charCodeAt(0))%360;
-  return {h:`hsl(${h} 55% 66%)`,a:`hsl(${h} 55% 42%)`};
+  return {h:`hsl(${h} 30% 58%)`,a:`hsl(${h} 30% 58%)`};
 }
+const LEADER={id:"leader",h:"#34d399",a:"#34d399"};
 const A=role=>role==="leader"?LEADER:{id:role,...colorOf(role)};
+/* pose do viewer -> quadro do sprite. sit/sitback (legado) = de costas no PC */
+const FRAME={stand:"stand",walk0:"walk0",walk1:"walk1",walk2:"walk2",sit:"type0",sitback:"type0",type0:"type0",type1:"type1"};
+function sprite(a,pose,mood,px,flip){
+  const {hair,pal}=paletteOf(a.id,a.a);
+  const rows=(V3[hair]||V3.short)[FRAME[pose]||"stand"];
+  return pix(rows,pal,px,16,flip);
+}
+/* mobilia no mesmo estilo: mesa com monitor (28x28) e encosto da cadeira (14x6).
+   GEOMETRIA (em pixels de sprite, SPX cada): o personagem sentado tem os ombros
+   (linha 13) na frente da mesa (linha 21) => topo do personagem = topo da mesa + 8 linhas;
+   o encosto cobre as linhas 21-26 do personagem (quadril). Tudo deriva de DESK(). */
+const DESK_W=28*SPX,DESK_H=28*SPX;
+const deskSvg=()=>pix(DESK_ROWS,FURN_PAL,SPX,28);
+const chairSvg=()=>pix(CHAIR_ROWS,FURN_PAL,SPX,14);
+const SIT_DX=(DESK_W-SPR_W)/2,SIT_DY=8*SPX;          /* personagem relativo a mesa */
+const CHAIR_DX=SIT_DX+(SPR_W-14*SPX)/2,CHAIR_DY=SIT_DY+21*SPX; /* encosto relativo a mesa */
 
 /* ================= layout from plan ================= */
-const CARD_W=176,COLW=240,X0=620,MIDY=340,ROWGAP=232; /* X0 abre espaco pra lounge a esquerda */
+const CARD_W=176,COLW=240,X0=620,MIDY=340,ROWGAP=252; /* X0 abre espaco pra lounge a esquerda */
 let plan=null,steps=[],stepsById={},EDGES=[],SW=1600,SH=720,FLOWY={min:340,max:340};
 function computeLayout(p){
   steps=p.steps.map(s=>({...s,deps:s.deps||[],status:"pending"}));
@@ -613,19 +588,33 @@ function computeLayout(p){
 }
 /* geometria em funcao da ALTURA REAL do card (uniforme, medida apos render) */
 let CARD_H=112,CORE_H=100; /* CARD_H = offsetHeight MEDIDO do node, nunca estimado */
-const DESK=s=>({x:s.x-33,y:s.y+CARD_H/2-5});
-const SEAT=s=>({x:s.x-18,y:s.y+CARD_H/2+25});
-const WAIT=s=>({x:s.x-104,y:s.y+CARD_H/2-11});
+const DESK=s=>({x:s.x-DESK_W/2,y:s.y+CARD_H/2-2});
+const SEAT=s=>{const d=DESK(s);return {x:d.x+SIT_DX,y:d.y+SIT_DY};};   /* deriva da MESA: sentar nunca desalinha */
+const CHAIR=s=>{const d=DESK(s);return {x:d.x+CHAIR_DX,y:d.y+CHAIR_DY};};
+const WAIT=s=>{const d=DESK(s);return {x:d.x-SPR_W-14,y:d.y-16};};
 /* zoom do passo ativo: o mais perto possivel SEM cortar a altura do fluxo */
 function stepZoom(){
   if(!steps.length)return .92;
   const ys=steps.map(s=>s.y),span=(Math.max(...ys)-Math.min(...ys))+206+CARD_H;
   return Math.min(1.45,Math.max(.55,(wrap.clientHeight-70)/span));
 }
-const LOUNGE={tv:{x:64,y:0},couch:{x:168,y:0},seat:i=>({x:196+i*26,y:0}),table:{x:230,y:0},plant:[{x:26,y:0},{x:452,y:0}]};
-function loungeY(){const base=MIDY-29; /* o TAPETE (caixa do ambiente: base-30..base+88) centrado no card */
-  LOUNGE.tv.y=base-16;LOUNGE.couch.y=base+14;LOUNGE.table.y=base+56;
-  LOUNGE.plant[0].y=base-52;LOUNGE.plant[1].y=base-36;LOUNGE._seatY=base-2;}
+/* BAIAS: quem nao esta no fluxo trabalha na sua baia (3x3, canto esquerdo), de costas,
+   teclando devagar — meio AFK. Cada papel tem baia fixa (ordem do roster), entao ninguem
+   disputa lugar e voltar da mesa e sempre para o mesmo ponto. */
+const BAY_COLS=3,BAY_DX=DESK_W+22,BAY_DY=DESK_H+26;
+const BAY_ORIGIN={x:70,y:MIDY-Math.floor(BAY_DY*1.5)+10};
+const BAYPOS=i=>({x:BAY_ORIGIN.x+(i%BAY_COLS)*BAY_DX,y:BAY_ORIGIN.y+Math.floor(i/BAY_COLS)*BAY_DY});
+const BAY_ROLES=["data-intern","backend-intern","ai-intern","frontend-intern","infra-intern",
+                 "qa-intern","ux-intern","reviewer-intern","pr-writer-intern"];
+let bayExtra=0;const bayIdx={};
+function bayOf(role){
+  if(role in bayIdx)return bayIdx[role];
+  const i=BAY_ROLES.indexOf(role);
+  bayIdx[role]=i>=0?i:BAY_ROLES.length+(bayExtra++);
+  return bayIdx[role];
+}
+const BAYSEAT=role=>{const p=BAYPOS(bayOf(role));return {x:p.x+SIT_DX,y:p.y+SIT_DY};};
+function loungeY(){}
 
 /* ================= DOM refs / shared state ================= */
 const stage=$("#stage"),edgesSvg=$("#edges"),stream=$("#stream"),wrap=$("#wrap");
@@ -834,8 +823,30 @@ function mkTok(role,x,y,mood,lead){
   const t={el,holder:el.querySelector(".hold-sp"),ag:role,mood:mood||"ok",pose:"stand",flip:false};
   setPose(t,"stand");toks[role]=t;return t;
 }
+/* quadro sentado: 'sitback' = trabalhando (tecla continuo, 300ms como no pixel-agents);
+   'sit' = na baia, AFK (rajadas de 2-4s teclando, pausas de 3-7s). Qualquer outra pose
+   para o teclado. Um unico timer por personagem — nunca dois loops brigando. */
+function stopType(t){if(t._ty){clearTimeout(t._ty);t._ty=null;}}
+function frame(t,f){t.holder.innerHTML=sprite(A(t.ag),f,t.mood,SPX,t.flip);}
+function startType(t,afk){
+  stopType(t);let f=0;
+  const tick=()=>{
+    if(t.pose!=="sitback"&&t.pose!=="sit"){t._ty=null;return;}
+    if(document.hidden){t._ty=setTimeout(tick,1000);return;}
+    f=1-f;frame(t,"type"+f);
+    let d=afk?520:300;
+    /* AFK: a cada rajada, chance de pausar com as maos na mesa */
+    if(afk&&f===0&&Math.random()<.35){frame(t,"type0");d=3000+Math.random()*4000;}
+    t._ty=setTimeout(tick,d);
+  };
+  t._ty=setTimeout(tick,afk?800+Math.random()*1500:300);
+}
 function setPose(t,pose){t.pose=pose;
-  t.holder.innerHTML=sprite(A(t.ag),pose,t.mood,3,t.flip);}
+  if(pose==="sitback"||pose==="sit")gsap.set(t.el,{y:0}); /* resto de bob() abriria um vao ate o encosto */
+  frame(t,pose);
+  if(pose==="sitback")startType(t,false);
+  else if(pose==="sit")startType(t,true);
+  else stopType(t);}
 function stopMove(t){if(t._iv){clearInterval(t._iv);t._iv=null;}
   gsap.killTweensOf(t.el,"left,top,y");} /* so movimento — nunca mate o fade de opacidade */
 async function walk(t,x,y,speed){
@@ -845,19 +856,23 @@ async function walk(t,x,y,speed){
      fila do papel no await e o estado ficaria para tras da run real */
   if(!liveMode||document.hidden){stopMove(t);gsap.set(el,{left:x,top:y,y:0});return;}
   stopMove(t);gsap.set(el,{y:0});t.flip=x<cx;
-  let f=0,intr=false;setPose(t,"walk0");
-  const iv=setInterval(()=>{f=1-f;setPose(t,"walk"+f);},150);t._iv=iv;
-  await gsap.to(el,{left:x,top:y,duration:d/(speed||150),ease:"none",
+  /* ciclo de 4 quadros com 3 desenhos (0-1-2-1), como no pack: o passo "neutro" no meio */
+  const CYC=[0,1,2,1];let f=0,intr=false;setPose(t,"walk0");
+  const iv=setInterval(()=>{f=(f+1)%4;setPose(t,"walk"+CYC[f]);},150);t._iv=iv;
+  await gsap.to(el,{left:x,top:y,duration:d/(speed||190),ease:"none",
     onInterrupt:()=>{intr=true;clearInterval(iv);}});
   clearInterval(iv);if(t._iv===iv)t._iv=null;
   if(!intr){t.flip=false;setPose(t,"stand");}
 }
 const bob=t=>{if(liveMode)gsap.to(t.el,{y:"-=3",duration:2,ease:"sine.inOut",yoyo:true,repeat:-1});};
+/* volta pra baia: caminha ate o assento da PROPRIA baia e senta de costas (AFK).
+   Assento deriva da mesa da baia — mesma geometria de sentar da mesa do passo. */
 async function sitCouch(t){
-  const p=LOUNGE.seat(seatN++);p.y=LOUNGE._seatY;
+  const p=BAYSEAT(t.ag);
   await walk(t,p.x,p.y);stopMove(t);gsap.set(t.el,{y:0});
-  t.el.style.zIndex=5;t.flip=true;setPose(t,"sit");
+  t.flip=false;setPose(t,"sit");
 }
+const sitBay=sitCouch;
 
 /* ================= log / leader / timers ================= */
 /* texto vindo dos hooks (comando, caminho, nota do Leader) e DADO, nunca markup.
@@ -905,13 +920,13 @@ async function patrol(){
     if(!liveMode){await sleep(600);continue;}
     if(cur.gate){await walk(L,cur.gate.x-64,cur.gate.y+26);await sleep(600);continue;}
     if(cur.step){const s=cur.step;
-      await walk(L,s.x+46,SEAT(s).y+2);if(cur.step!==s)continue;
+      await walk(L,DESK(s).x+DESK_W+6,DESK(s).y-8);if(cur.step!==s)continue;
       await sleep(700);if(cur.step!==s)continue;
-      await walk(L,s.x+98,SEAT(s).y+2,110);if(cur.step!==s)continue;
+      await walk(L,DESK(s).x+DESK_W+52,DESK(s).y-8,110);if(cur.step!==s)continue;
       await sleep(700);
     }else await sleep(400);
   }
-  await walk(L,LOUNGE.seat(Math.min(seatN,8)).x+40,LOUNGE._seatY+6);
+  await walk(L,BAY_ORIGIN.x+BAY_COLS*BAY_DX+8,BAY_ORIGIN.y+BAY_DY-20);
 }
 
 /* ================= graph build (on plan) ================= */
@@ -990,7 +1005,8 @@ function buildGraph(){
         const n=nodeEl[s.id];if(!n)return;
         gsap.set(n,{y:-CARD_H/2});
         const d=deskEl[s.id];
-        if(d){d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";}});
+        if(d){d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";
+          if(d._chair){d._chair.style.left=CHAIR(s).x+"px";d._chair.style.top=CHAIR(s).y+"px";}}});
     }}).catch(()=>{}); /* medir fonte nunca pode derrubar o palco */
   SH=Math.max(720,FLOWY.max+CARD_H+170);
   loungeY();
@@ -1001,20 +1017,23 @@ function buildGraph(){
     if(s.human)return;
     const d=document.createElement("div");d.className="furn";
     d.style.left=DESK(s).x+"px";d.style.top=DESK(s).y+"px";d.style.opacity=0;
-    d.innerHTML=`<div class="fshadow" style="left:-4px;top:42px;width:76px;height:11px"></div>`+deskSvg();
-    stage.appendChild(d);deskEl[s.id]=d;});
-  /* lounge */
-  const rug=document.createElement("div");rug.className="furn";
-  rug.style.cssText=`left:44px;top:${LOUNGE.tv.y-14}px;width:452px;height:118px;z-index:1;
-    background:var(--shell);border:1px solid var(--hair-soft);border-radius:16px`;
-  stage.appendChild(rug);
-  const add=(x,y,html)=>{const f=document.createElement("div");f.className="furn";
-    f.style.left=x+"px";f.style.top=y+"px";f.innerHTML=html;stage.appendChild(f);};
-  add(LOUNGE.tv.x,LOUNGE.tv.y,`<div class="fshadow" style="left:2px;top:68px;width:80px;height:12px"></div>
-    <div class="tvglow" style="left:70px;top:4px;width:160px;height:56px"></div>`+tvSvg());
-  add(LOUNGE.couch.x,LOUNGE.couch.y,`<div class="fshadow" style="left:0;top:52px;width:274px;height:14px"></div>`+couchSvg());
-  add(LOUNGE.table.x,LOUNGE.table.y,`<div class="fshadow" style="left:2px;top:24px;width:52px;height:9px"></div>`+tableSvg());
-  LOUNGE.plant.forEach(p=>add(p.x,p.y,`<div class="fshadow" style="left:2px;top:44px;width:34px;height:8px"></div>`+plantSvg()));
+    d.innerHTML=deskSvg();
+    stage.appendChild(d);deskEl[s.id]=d;
+    /* encosto da cadeira: fica NA FRENTE do personagem (cobre o quadril) — e o que
+       faz "sentar" ler como sentar, em vez de um boneco em pe colado na mesa */
+    const c=document.createElement("div");c.className="furn chair";
+    c.style.left=CHAIR(s).x+"px";c.style.top=CHAIR(s).y+"px";c.style.opacity=0;
+    c.innerHTML=chairSvg();stage.appendChild(c);d._chair=c;});
+  /* baias: piso discreto + 9 mesas em 3x3 (+ extras do roster, se houver) */
+  const nb=Math.max(BAY_ROLES.length,Object.keys(bayIdx).length);
+  const rows=Math.ceil(nb/BAY_COLS);
+  const floor=document.createElement("div");floor.className="furn";
+  floor.style.cssText=`left:${BAY_ORIGIN.x-22}px;top:${BAY_ORIGIN.y-18}px;width:${BAY_COLS*BAY_DX+22}px;height:${rows*BAY_DY+18}px;z-index:1;
+    background:var(--shell);border:1px solid var(--hair-soft);border-radius:14px`;
+  stage.appendChild(floor);
+  for(let i=0;i<nb;i++){const p=BAYPOS(i);
+    const d=document.createElement("div");d.className="furn";d.style.left=p.x+"px";d.style.top=p.y+"px";d.innerHTML=deskSvg();stage.appendChild(d);
+    const c=document.createElement("div");c.className="furn chair";c.style.left=(p.x+CHAIR_DX)+"px";c.style.top=(p.y+CHAIR_DY)+"px";c.innerHTML=chairSvg();stage.appendChild(c);}
   /* roster: SEMPRE os 9 papeis do time, + qualquer extra do plano */
   const CANON=["data-intern","backend-intern","ai-intern","frontend-intern","infra-intern",
                "qa-intern","ux-intern","reviewer-intern","pr-writer-intern"];
@@ -1023,26 +1042,27 @@ function buildGraph(){
   roles.forEach(role=>{
     const a=A(role),meta=(plan.roster||[]).find(r=>(r.id||r)===role);
     const r=document.createElement("div");r.className="row";
-    r.innerHTML=`<div class="rsp">${sprite(a,"stand","ok",1.6)}</div>
+    r.innerHTML=`<div class="rsp">${sprite(a,"stand","ok",1.1)}</div>
      <div class="rt"><div class="rn">${role}</div><div class="rmod">${meta&&meta.model||""}</div></div>
      <div class="rs">—</div>`;
     $("#roster").appendChild(r);rowEl[role]=r;
     const used=steps.some(s=>!s.human&&s.owner===role);
     r.classList.toggle("on",used);
     if(!used){r.classList.add("out");
-      r.querySelector(".rsp").innerHTML=sprite(a,"sit","sad",1.6);
-      r.querySelector(".rs").textContent=t("natv");
-      const tk=mkTok(role,LOUNGE.seat(seatN).x,LOUNGE._seatY,"sad");
-      seatN++;tk.flip=true;setPose(tk,"sit");tk.el.style.zIndex=5;}
+      r.querySelector(".rsp").innerHTML=sprite(a,"sit","ok",1.1);
+      r.querySelector(".rs").textContent=t("natv");}
+    /* TODO MUNDO comeca na propria baia; quem entra no fluxo caminha dali ate a mesa */
+    const bp=BAYSEAT(role);const tk=mkTok(role,bp.x,bp.y,"ok");setPose(tk,"sit");
   });
   updCnt();
   /* materializa */
   const dur=liveMode?.8:0;
   steps.forEach((s,i)=>{
     gsap.to(nodeEl[s.id],{opacity:1,scale:1,filter:"blur(0px)",duration:dur,delay:liveMode?i*.07:0,ease:"power4.out"});
-    if(deskEl[s.id])gsap.to(deskEl[s.id],{opacity:1,duration:dur,delay:liveMode?i*.07:0});});
+    if(deskEl[s.id]){gsap.to(deskEl[s.id],{opacity:1,duration:dur,delay:liveMode?i*.07:0});
+      if(deskEl[s.id]._chair)gsap.to(deskEl[s.id]._chair,{opacity:1,duration:dur,delay:liveMode?i*.07:0});}});
   Object.values(pathEl).forEach((p,i)=>gsap.to(p,{strokeDashoffset:0,duration:liveMode?.7:0,delay:liveMode?.35+i*.06:0}));
-  if(!toks.leader){const L=mkTok("leader",260,LOUNGE._seatY-10,"ok",true);
+  if(!toks.leader){const L=mkTok("leader",BAY_ORIGIN.x+BAY_COLS*BAY_DX+8,BAY_ORIGIN.y+BAY_DY-20,"ok",true);
     gsap.fromTo(L.el,{opacity:0},{opacity:1,duration:.5});patrol();}
   fit();
   leader(t("planReceived")(steps.length),false);
@@ -1097,6 +1117,7 @@ function hardReset(){
   for(const k in aidStep)delete aidStep[k];
   for(const k in charStep)delete charStep[k];
   for(const k in bubbles)delete bubbles[k];
+  Object.values(toks).forEach(t=>{stopType(t);stopMove(t);});
   toks={};seatN=0;doneN=0;dynN=0;lastDynX=-1e9;lastDone=null;
   cur.step=null;cur.gate=null;cur.done=false;
   flashTitle(false);gsap.set($("#gate"),{opacity:0});
@@ -1323,7 +1344,7 @@ const nextOwn=(role,after)=>{const i=steps.indexOf(after);
 
 function ensureTok(role,s){
   if(toks[role])return toks[role];
-  const t=mkTok(role,LOUNGE.couch.x+60,LOUNGE._seatY,"ok");
+  const bp=BAYSEAT(role);const t=mkTok(role,bp.x,bp.y,"ok");setPose(t,"sit");
   gsap.fromTo(t.el,{opacity:0},{opacity:1,duration:.4});
   return t;
 }
@@ -1340,7 +1361,7 @@ function think(role,text){
     b._vis=false;
   }
   b.textContent=text.length>72?text.slice(0,70)+"…":text;
-  const x=parseFloat(t.el.style.left)+18,y=parseFloat(t.el.style.top)-14;
+  const x=parseFloat(t.el.style.left)+SPR_W/2,y=parseFloat(t.el.style.top)-10;
   b.style.left=x+"px";b.style.top=y+"px";
   clearTimeout(b._to);
   if(!b._vis){ /* entrada: condensa do nada e comeca a flutuar */
