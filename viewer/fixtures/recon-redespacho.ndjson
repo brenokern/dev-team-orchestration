@@ -1,0 +1,12 @@
+{"t": 1700000000000, "ev": "plan", "plan": {"title": "H1 \u2014 recon x re-despacho", "roster": [{"id": "backend-intern", "model": "opus"}], "steps": [{"id": "s1", "title": "10.1 service", "layer": "backend", "owner": "backend-intern", "deps": []}, {"id": "s2", "title": "10.2 controller", "layer": "backend", "owner": "backend-intern", "deps": ["s1"]}]}}
+{"t": 1700000001500, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s1 10.1 service", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000002700, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1"}
+{"t": 1700000022700, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tool": "Edit", "info": "x.ts"}
+{"t": 1700000042700, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA1", "tok": 40000}
+{"t": 1700000045700, "ev": "recon", "done": [{"sub": "dev-team-orchestration:backend-intern", "desc": "backend-intern: s1 10.1 service"}]}
+{"t": 1700000050700, "ev": "PreToolUse", "tool": "Agent", "info": "backend-intern: s1 10.1 service \u2014 corrigir achado", "sub": "dev-team-orchestration:backend-intern"}
+{"t": 1700000051900, "ev": "SubagentStart", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2"}
+{"t": 1700000054900, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tool": "Edit", "info": "x.ts"}
+{"t": 1700000056900, "ev": "recon", "done": [{"sub": "dev-team-orchestration:backend-intern", "desc": "backend-intern: s1 10.1 service"}]}
+{"t": 1700000086900, "ev": "PreToolUse", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tool": "Bash", "info": "pnpm test"}
+{"t": 1700000116900, "ev": "SubagentStop", "agent": "dev-team-orchestration:backend-intern", "aid": "aA2", "tok": 25000}

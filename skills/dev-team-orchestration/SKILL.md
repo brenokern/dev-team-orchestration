@@ -284,6 +284,10 @@ visualização"/"com o team-view", o Leader adiciona 4 obrigações ao fluxo (na
    Use o `stepId` do plan-graph quando o veredito é de um passo (a nota ancora e foca o card);
    `-` para notas gerais. NÃO emita note por passo atômico — só nos marcos (é o narrador da
    run, não um segundo log de tools).
+   **Notas, gates e títulos do plan-graph são texto que o dev lê na tela: escreva em pt-BR
+   correto, com acentos e pontuação** ("lança", "não", "revisão", "concluído"). O argumento
+   do Bash aceita UTF-8 normalmente — não "asciifique" para evitar aspas; use aspas duplas
+   no shell e escape só as aspas internas.
 
 6. **Commit do passo (diff clicável)**: quando o relatório de um passo trouxer o hash do
    commit local, emita `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" commit <stepId> <hash>` —

@@ -1,0 +1,8 @@
+{"t": 1700000000000, "ev": "plan", "plan": {"title": "H4 — silêncio longo com agente vivo", "roster": [{"id": "qa-intern", "model": "opus"}], "steps": [{"id": "q0", "title": "lint", "layer": "qa", "owner": "qa-intern", "deps": []}, {"id": "q1", "title": "0.8 QA: build + testes", "layer": "qa", "owner": "qa-intern", "deps": ["q0"]}]}}
+{"t": 1700000001500, "ev": "PreToolUse", "tool": "Agent", "info": "qa-intern: q0 lint", "sub": "dev-team-orchestration:qa-intern"}
+{"t": 1700000002700, "ev": "SubagentStart", "agent": "dev-team-orchestration:qa-intern", "aid": "aQ0"}
+{"t": 1700000011700, "ev": "PreToolUse", "agent": "dev-team-orchestration:qa-intern", "aid": "aQ0", "tool": "Bash", "info": "pnpm lint"}
+{"t": 1700000020700, "ev": "SubagentStop", "agent": "dev-team-orchestration:qa-intern", "aid": "aQ0", "tok": 9000}
+{"t": 1700000022200, "ev": "PreToolUse", "tool": "Agent", "info": "qa-intern: q1 0.8 QA build + testes", "sub": "dev-team-orchestration:qa-intern"}
+{"t": 1700000023400, "ev": "SubagentStart", "agent": "dev-team-orchestration:qa-intern", "aid": "aQ1"}
+{"t": 1700000025400, "ev": "PreToolUse", "agent": "dev-team-orchestration:qa-intern", "aid": "aQ1", "tool": "Bash", "info": "cd apps/backend && pnpm build && pnpm test > /tmp/qa.log 2>&1; tail -40 /tmp/qa.log"}

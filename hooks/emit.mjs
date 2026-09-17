@@ -25,9 +25,19 @@ const LATEST = path.join(DIR, "latest");
    se contaminam — cada Leader/viewer resolve a sessao do SEU diretorio */
 const cwdKey = c => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h.toString(36); };
 const LATEST_OF = c => path.join(DIR, "latest-" + cwdKey(c));
+/* ponteiro da RUN (por projeto): so a sessao do Team Leader escreve aqui. Qualquer
+   sessao do Claude Code no mesmo diretorio dispara hooks e reescreve `latest-*`
+   (e o unico jeito do `emit.mjs plan` achar a propria sessao) — mas um terminal
+   aberto ao lado, ou uma sessao do Cowork na mesma pasta, fazia o viewer pular
+   pra uma sessao SEM plano e voltar, recarregando a pagina a cada hook alheio.
+   O Leader se identifica sozinho: e a unica sessao cujos comandos Bash invocam
+   este emit.mjs (plan/gate/note/commit). */
+const RUN_OF = c => path.join(DIR, "run-" + cwdKey(c));
 
 const ensure = () => { try { fs.mkdirSync(DIR, { recursive: true }); } catch {} };
 const readLatest = () => {
+  /* run-<cwd> (sessao do Leader) > latest-<cwd> (ultima sessao no cwd) > latest (global) */
+  try { const s = fs.readFileSync(RUN_OF(process.cwd()), "utf8").trim(); if (s) return s; } catch {}
   try { const s = fs.readFileSync(LATEST_OF(process.cwd()), "utf8").trim(); if (s) return s; } catch {}
   try { return fs.readFileSync(LATEST, "utf8").trim() || null; } catch { return null; }
 };
@@ -92,6 +102,10 @@ async function hookMode() {
   let p; try { p = JSON.parse(raw); } catch { return; }
   const session = p.session_id; if (!session) return;
   setLatest(session, p.cwd);
+  /* Bash do Leader chamando emit.mjs => esta sessao E a run deste projeto */
+  if (p.cwd && p.tool_name === "Bash" && /emit\.mjs\s+(plan|gate|note|commit|skip)\b/.test(String(p.tool_input && p.tool_input.command || ""))) {
+    try { ensure(); fs.writeFileSync(RUN_OF(p.cwd), session); } catch {}
+  }
   /* ponteiro pro transcript JSONL: e a fonte da verdade que o cli.mjs usa
      na reconciliacao (fecha passos mesmo com SubagentStop perdido) */
   if (p.transcript_path) {
@@ -160,7 +174,7 @@ function cliMode(argv) {
     const [, id, status, ...rest] = argv;
     const msg = rest.join(" ");
     append(session, { t: Date.now(), ev: "gate", id, status, msg });
-    if (status === "waiting") toast("team-view: precisa de voce", msg || "Volte ao terminal para aprovar o proximo passo.");
+    if (status === "waiting") toast("team-view: precisa de você", msg || "Volte ao terminal para aprovar o próximo passo.");
   } else if (argv[0] === "skip") {
     /* passo removido na escalacao (o plan NUNCA e re-emitido): emit.mjs skip <stepId> [motivo] */
     const [, id, ...rest] = argv;
