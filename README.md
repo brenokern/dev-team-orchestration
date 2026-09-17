@@ -96,9 +96,13 @@ Como funciona por baixo (e por que é seguro):
   o card fica âmbar pulsando, toca um chime, o título da aba pisca e o `emit.mjs` dispara uma
   **notificação nativa do SO** — tudo apontando para o mesmo lugar: **volte ao terminal**.
   (Browser não consegue focar a janela do terminal; o aviso é o melhor honesto.)
-- **Replay**: `node viewer/cli.mjs --replay ~/.claude/team-view/<sessão>.ndjson` reassiste
-  qualquer run. `viewer/demo.html` é uma demo standalone com uma run simulada (abra direto no
-  browser, sem servidor).
+- **Sem memória**: ao fim da run (`emit.mjs done`, emitido pelo Leader) ou quando o terminal
+  fecha (`SessionEnd`), o plugin apaga o ndjson, o `.meta` e os ponteiros daquela sessão em
+  `~/.claude/team-view`. Nada fica guardado entre runs — o viewer aberto continua mostrando a
+  cena final, mas um F5 depois disso abre vazio.
+- **Replay**: `node viewer/cli.mjs --replay <arquivo.ndjson>` reassiste uma run a partir de um
+  log guardado à mão (copie o ndjson antes do `done`, se quiser). `viewer/demo.html` é uma demo
+  standalone com uma run simulada (abra direto no browser, sem servidor).
 - **Teste**: `node viewer/test.mjs` carrega as fixtures no viewer de verdade, num Chrome
   headless (zero deps — CDP pelo WebSocket nativo do Node 22), e checa as invariantes de
   estado: tempo e token nunca se perdem, card nunca fica em "0s", e o F5 reconstrói o mesmo

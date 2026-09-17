@@ -73,6 +73,10 @@ Com o gate aprovado, adicione ao fluxo normal da skill estas obrigações do mod
    node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" gate <id> approved
    ```
 
+5. **Encerre a run**: depois do relatório final ao usuário, rode
+   `node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" done "<resumo de uma linha>"` — o viewer
+   fecha a cena e a memória da run (log, meta, ponteiros) é apagada. Nada fica guardado.
+
 Todo o resto — camadas, revisão por camada, QA, UX, TLDR — segue o SKILL.md sem mudança.
 A aprovação humana acontece SEMPRE no terminal; o viewer apenas avisa e mostra.
 

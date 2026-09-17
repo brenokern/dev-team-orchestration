@@ -227,6 +227,15 @@ Reporte ao usuário: camadas entregues, commits locais na branch, resultado do Q
 UX, e o TLDR do PR. Lembre que **nada foi enviado ao remoto** e que a **migration (se houver)
 aguarda ele revisar e aplicar**.
 
+Por último, **sempre** (com ou sem viewer aberto), declare a run concluída e apague a
+memória do team-view desta run:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/hooks/emit.mjs" done "<resumo de uma linha: N camadas, QA ok, PR aberto>"
+```
+O plugin não guarda nada depois da run: o `done` fecha a cena no viewer e remove o log
+(`~/.claude/team-view/<sessão>.ndjson`), o `.meta` e os ponteiros da sessão. Se o terminal
+for fechado antes disso, o hook `SessionEnd` faz a mesma limpeza.
+
 ## Reuso de skills pelos especialistas
 - `frontend-intern` → `taste-skill`, `ui-ux-pro-max` para UI (se instaladas).
 - `ux-intern` → `design:design-critique`, `design:accessibility-review`, `ui-ux-pro-max`.

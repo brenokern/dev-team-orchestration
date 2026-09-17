@@ -1783,6 +1783,13 @@ function route(e){
     s._commit=e.hash;
     const n=nodeEl[s.id];if(n)n.classList.add("hasnotes");
     return;}
+  if(e.ev==="done"){ /* `emit.mjs done`: o Leader declarou a run concluída */
+    steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x,"inferredDone",e.t);});
+    cur.done=true;cur.gate=null;flashTitle(false);hideGate();
+    focus(270,MIDY,.85);
+    leader(t("runDone"),false);
+    log("leader",(e.msg?e.msg+" — ":"")+t("teamEnd"),"rep");
+    return;}
   if(e.ev==="SessionEnd"){ /* fim oficial da sessao: fecha a cena com honestidade */
     steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
     cur.done=true;cur.gate=null;flashTitle(false);hideGate();

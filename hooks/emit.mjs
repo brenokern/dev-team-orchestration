@@ -83,6 +83,22 @@ function gc() {
   } catch {}
 }
 
+/* memória do plugin: o team-view não guarda nada depois da run. Apaga o ndjson e o
+   .meta da sessão e todo ponteiro (latest, latest-<cwd>, run-<cwd>) que aponte pra ela.
+   Roda no `emit.mjs done` (fim da run) e no SessionEnd (terminal fechou). Espera um
+   pouco antes: o cli.mjs faz tail por polling (300ms) e precisa ler a última linha. */
+const purge = (session, waitMs = 1500) => new Promise(res => setTimeout(() => {
+  try {
+    for (const ext of [".ndjson", ".meta"]) { try { fs.unlinkSync(path.join(DIR, session + ext)); } catch {} }
+    for (const f of fs.readdirSync(DIR)) {
+      if (f !== "latest" && !f.startsWith("latest-") && !f.startsWith("run-")) continue;
+      const full = path.join(DIR, f);
+      try { if (fs.readFileSync(full, "utf8").trim() === session) fs.unlinkSync(full); } catch {}
+    }
+  } catch {}
+  res();
+}, waitMs));
+
 function summarize(input) {
   if (!input || typeof input !== "object") return "";
   const s = input.file_path || input.command || input.description || input.prompt || input.pattern || "";
@@ -155,12 +171,20 @@ async function hookMode() {
     }
   }
   append(session, e);
+  /* terminal fechou: a run acabou de qualquer jeito — apaga a memória desta sessão */
+  if (p.hook_event_name === "SessionEnd") await purge(session, 1200);
 }
 
-function cliMode(argv) {
+async function cliMode(argv) {
   const session = readLatest();
   if (!session) return; /* nenhuma sessao registrada ainda */
-  if (argv[0] === "plan") {
+  if (argv[0] === "done") {
+    /* fim da run: emit.mjs done ["resumo curto"] — o viewer fecha a cena e, em seguida,
+       a memória da run (ndjson, meta, ponteiros) é apagada. Não é necessária depois. */
+    const msg = argv.slice(1).join(" ").slice(0, 300);
+    append(session, { t: Date.now(), ev: "done", msg });
+    await purge(session);
+  } else if (argv[0] === "plan") {
     try {
       const plan = JSON.parse(fs.readFileSync(argv[1], "utf8"));
       append(session, { t: Date.now(), ev: "plan", plan });
@@ -189,6 +213,6 @@ function cliMode(argv) {
 
 try {
   const argv = process.argv.slice(2);
-  if (argv.length) cliMode(argv); else await hookMode();
+  if (argv.length) await cliMode(argv); else await hookMode();
 } catch {}
 process.exit(0);
