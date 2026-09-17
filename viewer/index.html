@@ -444,7 +444,7 @@ const STR={
   started:(i,tt)=>"iniciou "+i+" — "+tt,
   finished:i=>"encerrou "+i+" — relatório no terminal",
   dispatched:"despachou: ",offPlan:"trabalhando (passo fora do plan-graph)",
-  noPlan:"o time comecou a trabalhar mas NENHUM plan-graph foi publicado — o palco fica vazio. Rode /dev-team-orchestration:run-visual, ou peca ao Leader o `emit.mjs plan`.",
+  noPlan:"o time começou a trabalhar, mas nenhum plan-graph foi publicado — o palco fica vazio. Rode /dev-team-orchestration:run-visual, ou peça ao Leader o `emit.mjs plan`.",
   offPlanEnd:"encerrou (fora do plan-graph)",
   approved:"aprovado — o time segue",teamEnd:"time encerrado.",you:"você",
   natv:"na tv",active:"ativo",waiting:"aguardando",actions:"ações",
@@ -454,7 +454,7 @@ const STR={
   inferredDone:"concluído (inferido — o passo seguinte do papel começou)",
   reconDone:"concluído (reconciliado pelo transcript)",
   reopened:"re-despachado — reaberto",
-  stalled:n=>"sem eventos há "+n+"s — run interrompida?",
+  stalled:n=>"sem eventos há "+(n>=120?Math.round(n/60)+"min":n+"s")+" — build longo ou run interrompida?",
   skipped:"removido na escalação",
   empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
  en:{team:"team",activity:"activity",session:"session",sound:"sound",theme:"theme",
@@ -486,7 +486,7 @@ const STR={
   inferredDone:"done (inferred — the role's next step started)",
   reconDone:"done (reconciled from the transcript)",
   reopened:"re-dispatched — reopened",
-  stalled:n=>"no events for "+n+"s — run interrupted?",
+  stalled:n=>"no events for "+(n>=120?Math.round(n/60)+"min":n+"s")+" — long build or interrupted run?",
   skipped:"removed from the lineup",
   empty:"no events yet<br>run <b>/dev-team-orchestration:run-visual</b> in the terminal"}
 };
@@ -682,6 +682,7 @@ const nowT=()=>((MODE==="replay"||CATCHUP)&&lastEvT)?lastEvT:Date.now();
 /* subfluxo dinamico: passos fora do plan-graph viram cards de verdade */
 let dynN=0,lastDone=null,lastDynX=-1e9,DYNY=900;
 const lastDispatch={}; /* false durante o batch de catch-up */
+const reconSeen={};   /* papel|description -> conclusoes do transcript ja consumidas */
 
 /* ================= zoom + pan + camera ================= */
 let k=1,ox=0,oy=0,cam=null;
@@ -859,11 +860,14 @@ async function sitCouch(t){
 }
 
 /* ================= log / leader / timers ================= */
+/* texto vindo dos hooks (comando, caminho, nota do Leader) e DADO, nunca markup.
+   `grep '<Button>'` sumia do stream e um `<img onerror>` num comando executava. */
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function log(who,what,cls){
   $("#empty")?.remove();
   const e=document.createElement("div");
   e.className="ev"+(cls?" "+cls:"")+(who==="leader"?" sys":"");
-  e.innerHTML=`<span class="who">${who}</span><span class="what">${what}</span>`;
+  e.innerHTML=`<span class="who">${esc(who)}</span><span class="what">${esc(what)}</span>`;
   stream.appendChild(e);
   while(stream.children.length>300)stream.firstChild.remove();
   if(liveMode)gsap.fromTo(e,{opacity:0,y:10,filter:"blur(5px)"},
@@ -949,7 +953,7 @@ function buildGraph(){
     n.style.left=s.x+"px";n.style.top=s.y+"px";
     const hasIn=EDGES.some(([,b])=>b===s.id),hasOut=EDGES.some(([a])=>a===s.id);
     n.innerHTML=`<div class="n-shell"><div class="n-core">
-      <div class="n-lay">${s.layer||""} <span class="n-subs"></span></div><div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
+      <div class="n-lay">${esc(s.layer||"")} <span class="n-subs"></span></div><div class="n-t" title="${esc(s.title)}">${esc(s.title)}</div>
       <div class="n-f"><span class="n-tm">0s</span></div>
       <div class="n-check">&#10003;</div></div></div>
       ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
@@ -1271,8 +1275,8 @@ function spawnCard(s,parent){
   const n=document.createElement("div");n.className="node dync"+(s.human?" humc":"");
   n.style.left=s.x+"px";n.style.top=s.y+"px";
   n.innerHTML=`<div class="n-shell"><div class="n-core">
-    <div class="n-lay">${s.layer||""} <span class="n-subs"></span></div>
-    <div class="n-t" title="${String(s.title).replace(/"/g,"&quot;")}">${s.title}</div>
+    <div class="n-lay">${esc(s.layer||"")} <span class="n-subs"></span></div>
+    <div class="n-t" title="${esc(s.title)}">${esc(s.title)}</div>
     <div class="n-f"><span class="n-tm">0s</span></div>
     <div class="n-check">&#10003;</div></div></div>
     <span class="p-in"></span>`;
@@ -1636,11 +1640,25 @@ function route(e){
       }
     }return;}
   if(e.ev==="recon"){ /* transcript JSONL = fonte da verdade (emitido pelo cli.mjs):
-      Task com tool_result no transcript TERMINOU, mesmo com SubagentStop perdido */
-    (e.done||[]).forEach(d=>{
-      const role=norm(d.sub);if(!role)return;
-      const s=bindStep(role,String(d.desc||"").replace(/^[a-z-]+\s*:\s*/i,""),true);
-      if(s&&(s.status==="running"||s.status==="pending"))closeOrphan(s,"reconDone",s._lastEv||e.t);
+      Task com tool_result no transcript TERMINOU, mesmo com SubagentStop perdido.
+      A lista vem ACUMULADA a cada tick, entao cada conclusao e consumida UMA vez:
+      contamos quantas vezes cada description ja concluiu no transcript e so agimos
+      sobre o excedente. Sem isso, o re-despacho de um passo era fechado segundos
+      depois de comecar pelo tool_result da PRIMEIRA rodada. */
+    const cnt={};
+    (e.done||[]).forEach(d=>{const k=norm(d.sub)+"|"+String(d.desc||"");cnt[k]=(cnt[k]||0)+1;});
+    Object.entries(cnt).forEach(([k,n])=>{
+      const seen=reconSeen[k]||0;if(n<=seen)return;
+      reconSeen[k]=n;
+      const [role,desc]=[k.slice(0,k.indexOf("|")),k.slice(k.indexOf("|")+1)];
+      if(!role)return;
+      const s=bindStep(role,desc.replace(/^[a-z-]+\s*:\s*/i,""),true);
+      if(!s||(s.status!=="running"&&s.status!=="pending"))return;
+      /* recon e pra stop PERDIDO — passo que deu sinal de vida ha pouco nao e
+         orfao; se o stop dele estiver realmente perdido, o proximo tick pega. */
+      const alive=Math.max(s._lastEv||0,s._start||0);
+      if(s.status==="running"&&alive&&(e.t||nowT())-alive<45000){reconSeen[k]=seen;return;}
+      closeOrphan(s,"reconDone",s._lastEv||e.t);
     });return;}
   if(e.ev==="commitref"){ /* commit do passo: vira diff clicavel no dialog do card */
     const s=stepsById[e.id];if(!s)return;
@@ -1735,7 +1753,7 @@ $("#c-runs").onclick=async()=>{
     const row=document.createElement("div");row.className="runrow";
     const when=new Date(r.mtime).toLocaleString(LANG==="pt"?"pt-BR":"en-US",
       {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
-    row.innerHTML=`<div class="rr-t"><div class="rr-n">${r.title||r.session.slice(0,12)}</div>
+    row.innerHTML=`<div class="rr-t"><div class="rr-n">${esc(r.title||r.session.slice(0,12))}</div>
       <div class="rr-m">${when} · ${r.steps||0} passos · ${(r.size/1024).toFixed(0)}KB · ${r.session.slice(0,8)}</div></div>`
       +(r.session===data.live?'<span class="rr-live">ao vivo</span>':"");
     row.onclick=()=>{location.href=r.session===data.live?"/":"/?session="+encodeURIComponent(r.session)+"&replay=1";};
@@ -1790,6 +1808,7 @@ function fullReset(){
   EV_LOG.length=0;
   for(const k in aidRole)delete aidRole[k];
   for(const k in lastDispatch)delete lastDispatch[k];
+  for(const k in reconSeen)delete reconSeen[k];
   totalTok=0;updTok();evN=0;$("#ec").textContent="0";
   stream.innerHTML="";
   edgesSvg.innerHTML="";
@@ -1895,12 +1914,11 @@ setInterval(()=>{ /* watchdog de silencio: run viva sem eventos = interrompida? 
   const busy=steps.some(x=>x.status==="running"||x.status==="waiting");
   if(!busy)return;
   const age=Math.round((Date.now()-lastRxWall)/1000);
-  if(age>300){ /* 5 min mudo: encerra a cena como interrompida */
-    steps.forEach(x=>{if(x.status==="running"&&!x.human)closeOrphan(x);});
-    cur.done=true;flashTitle(false);
-    leader(t("ended"),false);log("leader",t("ended"));
-    $("#status").className="status dead";$("#status-t").textContent=t("ended");
-  }else if(age>90){
+  /* silencio NAO e morte: um `pnpm build` ou uma suite de testes e UM tool
+     call e depois minutos mudos. Encerrar a cena aos 5 min fechava passo vivo e
+     carimbava "sessao encerrada" numa run que estava rodando. Agora o watchdog
+     so INFORMA — quem encerra e SessionEnd, o Stop sem nada pendente, ou o dev. */
+  if(age>90){
     $("#status").className="status dead";$("#status-t").textContent=t("stalled")(age);
   }
 },10000);

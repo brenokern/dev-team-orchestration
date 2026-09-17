@@ -1,0 +1,7 @@
+{"t": 1700000000000, "ev": "plan", "plan": {"title": "H3 \u2014 html no stream", "roster": [{"id": "frontend-intern", "model": "fable"}], "steps": [{"id": "s1", "title": "0.1 botao", "layer": "frontend", "owner": "frontend-intern", "deps": []}]}}
+{"t": 1700000001500, "ev": "PreToolUse", "tool": "Agent", "info": "frontend-intern: s1 0.1 botao", "sub": "dev-team-orchestration:frontend-intern"}
+{"t": 1700000002700, "ev": "SubagentStart", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1"}
+{"t": 1700000005700, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1", "tool": "Bash", "info": "grep -rn '<Button variant=\"ghost\">' apps/frontend/src | head"}
+{"t": 1700000008700, "ev": "PreToolUse", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1", "tool": "Edit", "info": "<img src=x onerror=\"window.__pwned=1\">"}
+{"t": 1700000011700, "ev": "note", "id": "s1", "msg": "reviewer: trocar <div> por <section> no layout"}
+{"t": 1700000014700, "ev": "SubagentStop", "agent": "dev-team-orchestration:frontend-intern", "aid": "aF1", "tok": 12000}
