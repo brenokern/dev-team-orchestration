@@ -34,8 +34,20 @@ const DIR = path.join(os.homedir(), ".claude", "team-view");
    de um repo/worktree segue a run DAQUELE diretorio, nao a mais nova global */
 const cwdKey = c => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h.toString(36); };
 const readPointer = () => {
+  /* run-<cwd> (sessao do Leader, escrita pelo emit.mjs quando ele ve o Leader
+     chamar plan/gate/note) > latest-<cwd> > latest global */
+  try { const s = fs.readFileSync(path.join(DIR, "run-" + cwdKey(process.cwd())), "utf8").trim(); if (s) return s; } catch {}
   try { const s = fs.readFileSync(path.join(DIR, "latest-" + cwdKey(process.cwd())), "utf8").trim(); if (s) return s; } catch {}
   try { return fs.readFileSync(path.join(DIR, "latest"), "utf8").trim() || null; } catch { return null; }
+};
+/* a sessao tem plan-graph? (le so o comeco do arquivo) */
+const hasPlan = session => {
+  try {
+    const full = path.join(DIR, session + ".ndjson");
+    const fd = fs.openSync(full, "r"); const buf = Buffer.alloc(Math.min(fs.statSync(full).size, 262144));
+    fs.readSync(fd, buf, 0, buf.length, 0); fs.closeSync(fd);
+    return buf.toString("utf8").includes('"ev":"plan"');
+  } catch { return false; }
 };
 
 const args = process.argv.slice(2);
@@ -56,7 +68,7 @@ function resolveFile() {
   let session = opt("session", null);
   if (!session || session === true) session = readPointer();
   if (!session) {
-    console.error("team-view: nenhuma sessao encontrada em " + DIR + " (rode o time primeiro, ou use --replay <arquivo>)");
+    console.error("team-view: nenhuma sessão encontrada em " + DIR + " (rode o time primeiro, ou use --replay <arquivo>)");
     /* ainda sobe o server: a pagina mostra 'aguardando sessao' e conecta quando o arquivo nascer */
   }
   return { file: session ? path.join(DIR, session + ".ndjson") : null, mode: "live", session };
@@ -130,7 +142,9 @@ function startTail() {
     if (!src.file) { retarget(); return; }
     if (!PINNED) {
       const latest = readPointer();
-      if (latest && latest !== src.session) {
+      /* nunca abandona uma sessao COM plano por uma SEM plano: hook solto de outro
+         terminal no mesmo projeto nao e uma run nova */
+      if (latest && latest !== src.session && !(hasPlan(src.session) && !hasPlan(latest))) {
         src.session = latest; src.file = path.join(DIR, latest + ".ndjson"); offset = 0; lineCount = 0;
         broadcast({ type: "hello", mode: "live", session: latest, resumable: true });
       }
@@ -231,17 +245,17 @@ const server = http.createServer((req, res) => {
   }
   if (req.url.startsWith("/show/")) { /* git show read-only: diff por passo */
     const hash = req.url.slice(6).split("?")[0];
-    if (!/^[0-9a-f]{7,40}$/i.test(hash)) { res.writeHead(400); return res.end("hash invalido"); }
+    if (!/^[0-9a-f]{7,40}$/i.test(hash)) { res.writeHead(400); return res.end("hash inválido"); }
     return execFile("git", ["show", "--stat", "--patch", "--no-color", hash],
       { cwd: process.cwd(), maxBuffer: 2 * 1024 * 1024, timeout: 8000 }, (err, stdout) => {
         res.writeHead(err ? 404 : 200, { "Content-Type": "text/plain; charset=utf-8" });
-        res.end(err ? "commit nao encontrado neste repositorio (o viewer roda em " + process.cwd() + ")" : stdout);
+        res.end(err ? "commit não encontrado neste repositório (o viewer roda em " + process.cwd() + ")" : stdout);
       });
   }
   try {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(fs.readFileSync(path.join(HERE, "index.html")));
-  } catch (e) { res.writeHead(500); res.end("viewer/index.html nao encontrado"); }
+  } catch (e) { res.writeHead(500); res.end("viewer/index.html não encontrado"); }
 });
 /* porta ocupada (outro viewer vivo)? tenta as proximas em vez de morrer */
 let port = PORT;
@@ -253,7 +267,7 @@ server.on("error", e => {
 });
 server.listen(port, () => {
   const url = `http://localhost:${server.address().port}`;
-  console.log(`team-view ${src.mode} em ${url}` + (src.session ? ` (sessao ${src.session.slice(0, 8)})` : ""));
+  console.log(`team-view ${src.mode} em ${url}` + (src.session ? ` (sessão ${src.session.slice(0, 8)})` : ""));
   startTail();
   if (OPEN) {
     const cmd = process.platform === "win32" ? ["cmd", ["/c", "start", "", url]]
