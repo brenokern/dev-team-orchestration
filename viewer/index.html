@@ -266,6 +266,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   padding:0 9px;border-radius:9px;cursor:pointer;
   transition:background .4s var(--ease),transform .4s var(--ease)}
 .zoom button:hover{background:var(--hair);transform:translateY(-1px)}
+.zoom button.on{background:var(--live-soft);border-color:var(--live-dim);color:var(--live)}
 .zoom button:active{transform:scale(.95)}
 .zoom .lv{font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--dim);min-width:38px;text-align:center}
 .status{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
@@ -340,7 +341,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--hair);border-radius:3px}
 </style>
 </head>
-<body data-theme="dark">
+<body data-theme="light">
 <div class="mesh"><div class="orb a"></div><div class="orb b"></div></div>
 <div class="grain"></div>
 
@@ -383,6 +384,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
         <button id="z-out">&minus;</button><span class="lv" id="z-lv">100%</span>
         <button id="z-in">+</button><button id="z-fit" style="font-size:9px">fit</button>
         <button id="z-focus" style="font-size:9px" title="centraliza no passo em execução">foco</button>
+        <button id="z-pan" style="font-size:9px" title="esconde/mostra as duas colunas (ctrl+J)">zen</button>
       </div>
       <div class="status" id="status"><span class="d"></span><span id="status-t">conectando…</span></div>
       <div class="gantt" id="gantt"></div>
@@ -425,6 +427,7 @@ let LANG="pt";try{LANG=localStorage.getItem("tv-lang")||"pt";}catch(e){}
 const STR={
  pt:{team:"time",activity:"atividade",session:"sessão",sound:"som",theme:"tema",
   focus:"foco",focusTip:"centraliza no passo em execução",fit:"fit",
+  zenTip:"esconde/mostra as duas colunas (ctrl+J)",
   connecting:"conectando…",live:"ao vivo",replay:"replay",
   disconnected:"desconectado — tentando de novo",replayDone:"replay concluído",
   waitingSession:"aguardando sessão",
@@ -456,6 +459,7 @@ const STR={
   empty:"nenhum evento ainda<br>rode <b>/dev-team-orchestration:run-visual</b> no terminal"},
  en:{team:"team",activity:"activity",session:"session",sound:"sound",theme:"theme",
   focus:"focus",focusTip:"center on the running step",fit:"fit",
+  zenTip:"hide/show both columns (ctrl+J)",
   connecting:"connecting…",live:"live",replay:"replay",
   disconnected:"disconnected — retrying",replayDone:"replay finished",
   waitingSession:"waiting for a session",
@@ -496,6 +500,7 @@ function applyLang(){
   $("#c-theme").innerHTML=`${t("theme")} <b>${document.body.dataset.theme}</b>`;
   $("#c-lang").textContent=LANG==="pt"?"PT-BR":"EN";
   $("#z-focus").textContent=t("focus");$("#z-focus").title=t("focusTip");
+  $("#z-pan").title=t("zenTip");
   $("#gate-t").textContent=t("needsYou");$("#gate-term").textContent=t("backTerm");
   $("#status-t").textContent=t(statusKey);
   const emp=$("#empty");if(emp)emp.innerHTML=t("empty");
@@ -748,9 +753,21 @@ function setPanel(side,on){ /* side: "l"|"r" */
   /* o palco muda de largura durante a transicao do grid: compensa o delta
      no fim, mantendo zoom e foco (nada de fit() resetando a visao) */
   clearTimeout(setPanel._to);setPanel._to=setTimeout(()=>keepView(),540);
+  const z=$("#z-pan");
+  if(z)z.classList.toggle("on",app.classList.contains("no-l")&&app.classList.contains("no-r"));
 }
 $("#c-panl").onclick=()=>{const on=app.classList.contains("no-l");panOv.l=on;setPanel("l",on);};
 $("#c-panr").onclick=()=>{const on=app.classList.contains("no-r");panOv.r=on;setPanel("r",on);};
+/* as DUAS colunas de uma vez, do lado do fit/foco: qualquer uma aberta => fecha
+   as duas; ambas fechadas => reabre as duas. Assim um clique so sempre resolve,
+   sem estado intermediario pra adivinhar. */
+function zen(){
+  const algumaAberta=!app.classList.contains("no-l")||!app.classList.contains("no-r");
+  const on=!algumaAberta;
+  panOv.l=on;panOv.r=on;
+  setPanel("l",on);setPanel("r",on);
+}
+$("#z-pan").onclick=zen;
 /* REATIVO: encolheu a janela (ou entrou mais um viewer no monitor), as colunas
    cedem sozinhas; cresceu de volta, elas reabrem. Cruzar um breakpoint limpa o
    override manual — a tela nova manda. */
@@ -771,13 +788,24 @@ addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   if(k==="b"){e.preventDefault();$("#c-panl").click();}
   else if(k==="l"){e.preventDefault();$("#c-panr").click();}
+  else if(k==="j"){e.preventDefault();zen();}
 });
 
 /* ================= chips / audio / title flash ================= */
 $("#c-snd").onclick=()=>{snd=!snd;const c=$("#c-snd");c.classList.toggle("ok",snd);
   c.classList.toggle("off",!snd);c.innerHTML=`${t("sound")} <b>${snd?"on":"off"}</b>`;};
-$("#c-theme").onclick=()=>{const b=document.body;const l=b.dataset.theme!=="light";
-  b.dataset.theme=l?"light":"dark";$("#c-theme").innerHTML=`${t("theme")} <b>${l?"light":"dark"}</b>`;};
+/* tema: default LIGHT, e a escolha do dev sobrevive ao F5 (o viewer roda sempre
+   na mesma origem localhost, entao o localStorage e estavel aqui). Leitura e
+   escrita em try/catch: aba anonima/storage bloqueado nao pode derrubar a pagina. */
+const THEME_KEY="team-view.theme";
+function setTheme(nome,lembrar){
+  document.body.dataset.theme=nome;
+  $("#c-theme").innerHTML=`${t("theme")} <b>${nome}</b>`;
+  if(lembrar)try{localStorage.setItem(THEME_KEY,nome);}catch{}
+}
+try{const salvo=localStorage.getItem(THEME_KEY);
+  if(salvo==="dark"||salvo==="light")document.body.dataset.theme=salvo;}catch{}
+$("#c-theme").onclick=()=>setTheme(document.body.dataset.theme==="light"?"dark":"light",true);
 $("#c-lang").onclick=()=>{LANG=LANG==="pt"?"en":"pt";applyLang();};
 let actx;
 function chime(){if(!snd)return;
