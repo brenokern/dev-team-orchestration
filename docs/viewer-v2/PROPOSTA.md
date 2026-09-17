@@ -126,48 +126,43 @@ fagulha na aresta ao concluir. Acrescentado: o rail animado. Retirado: pulso na 
 **`prefers-reduced-motion` passa a ser respeitado** (hoje não é): rail estático, sem walk
 interpolado — o personagem simplesmente aparece na mesa.
 
-## 4. Personagens — implementado na branch (v3, estilo pixel-agents)
+## 4. Personagens — os do pixel-agents, idênticos (v4, na branch)
 
-A primeira rodada (v2, `sprites-v2.json`, pernas grossas e proporção "de frente") foi
-descartada depois da sua revisão. A referência passou a ser o **Pixel Agents** que você já roda
-no VS Code: personagens do pack *JIK-A-4 Metro City* (MIT no repo do pixel-agents; aqui o
-estilo é reproduzido, não copiado), 16×32 em vista 3/4 top-down.
+Duas rodadas foram descartadas na sua revisão: a v2 (pernas grossas, contorno preto) e a v3
+(estilo "inspirado", ainda com diferenças). A v4 usa **os mesmos assets do pixel-agents**: os
+PNGs de `webview-ui/public/assets` (personagens `char_0..5`, `DESK_FRONT`, `PC_FRONT_ON_1..3`,
+`PC_FRONT_OFF`, `CUSHIONED_CHAIR_BACK`) convertidos pixel a pixel para linhas de texto + paleta —
+verificado igual ao original em cada pixel. Crédito: pack *JIK-A-4 Metro City* (itch.io), via
+pixel-agents (MIT). Nada foi redesenhado; `sprites-v4/pa-assets.json` é a fonte.
 
-O que define o estilo, e foi reproduzido em `sprites-v3/`:
-- **sem contorno preto** — a borda é o tom mais escuro do próprio material;
-- **3 tons por material** (cabelo com brilho, pele com sombra, camisa com luz);
-- cabeça redonda grande (~10 linhas), corpo curto, pernas de 3px com vão de 2px — é a proporção
-  do pack, não a "adulta" da v2; o que faz parecer adulto é o acabamento, não a anatomia;
-- guarda-roupa real: marinho, carvão, off-white, oxblood, oliva; jeans, cáqui, calça escura;
-- 4 variantes de cabelo (curto, bob, cacheado, raspado) × 5 cores; 3 tons de pele. Os 9 papéis
-  + leader estão na tabela `V3ROLES`; papel novo no roster sorteia variantes por hash do nome;
-- o papel aparece **só no cordão do crachá** (3px pelo peito, cor dessaturada).
+- 6 personagens para 10 papéis: `backend`→char_0, `frontend`→char_1, `data`→char_2,
+  `leader`→char_3, `reviewer`→char_4, `qa`→char_5; `ai`, `infra`, `ux` e `pr-writer` reusam um
+  sheet com a **roupa** deslocada em matiz (pele e cabelo preservados), como o próprio
+  pixel-agents faz para variar agentes. Papel novo no roster: sheet e matiz por hash do nome.
+- Quadros: `stand` (frente, quadro neutro da caminhada), `walk0-2` (lateral, ciclo 0-1-2-1 a
+  150ms — `WALK_FRAME_DURATION_SEC` deles), `type0-1` e `read0-1` (de costas). **Read/Grep/Glob/
+  WebFetch mostram o quadro de leitura; Edit/Write/Bash, o de digitar** — a mesma regra do
+  pixel-agents (`typing` × `reading`).
+- A cor do papel no roster e nas arestas passa a ser a cor da camisa do boneco.
 
-Poses e animação — mesma lógica do viewer, mais cuidado com o sentar:
-- `stand` (frente) · `walk0/1/2` (lateral; ciclo 0-1-2-1 a 150ms, como o pack) ·
-  `type0/type1` (de costas, teclando). `sit` e `sitback` do código antigo mapeiam para `type`.
-- **Sentar deriva da mesa, não do card.** `SEAT(s)` e `CHAIR(s)` são calculados a partir de
-  `DESK(s)` com deslocamentos fixos em pixels de sprite (`SIT_DX/SIT_DY`, `CHAIR_DX/CHAIR_DY`).
-  Geometria, como no pixel-agents: topo do personagem = topo da mesa + 14 linhas — a cabeça fica
-  sobre a metade de baixo da mesa (em frente ao monitor), o tronco já abaixo dela, e o **encosto
-  da cadeira (z-index 7) cobre o quadril**. É o encosto na frente que faz "sentado" ler como
-  sentado. Ao sentar, `gsap.set(y:0)` zera qualquer resto do `bob()` — era isso que abria um vão
-  entre tronco e encosto.
-- Teclar: trabalhando = quadros a 300ms; **AFK** = rajadas de ~500ms com pausas aleatórias de
-  3–7s. Um único timer por personagem (`startType/stopType`), zerado em qualquer outra pose.
+**Estação de trabalho — a geometria do pixel-agents, em pixels de sprite:** mesa `(0,0)` 48×32;
+PC `(16,0)` em cima da mesa (top-anchored na mesma linha, como no layout deles); cadeira
+`(16,32)` 16×16; personagem sentado em `(16, 22)` = `32 + 16 + CHARACTER_SITTING_OFFSET_PX(6) −
+32`. A cabeça fica sobre a borda de baixo da mesa, o tronco atrás do encosto verde (z acima do
+personagem — `Back-facing chairs render IN FRONT of the seated character`, do
+`layoutSerializer.ts` deles). `SEAT`/`CHAIR`/`PC` derivam todos de `DESK(s)`.
 
-**Sofá e TV saíram. Entraram baias.** Um bloco 3×3 de mesas à esquerda; cada papel tem baia fixa
-(ordem do roster). Todo mundo começa na sua baia teclando meio AFK; quem é despachado caminha
-até a mesa do passo; ao terminar, volta para a mesma baia. O status do roster `na tv` virou
-`na baia`. O `sitCouch` continua existindo como nome (aliás `sitBay`) para não tocar nos
-chamadores.
+**Telas dos PCs:** acesas e animadas (3 quadros a 420ms) onde há alguém sentado — mesa do passo
+ou baia —, apagadas onde não há. Um único ticker cuida de todas.
 
-Verificado em chromium headless: chegada exata em `SEAT(s3)` depois de uma caminhada de
-1.240px; AFK alternando quadros nas baias; teclado a 300ms na mesa; F5 preserva assentos.
-As 150 checagens do `viewer/test.mjs` continuam passando — a máquina de estados não foi tocada.
+**Baias:** bloco 3×3 de estações à esquerda, uma fixa por papel. Todo mundo começa na sua baia
+teclando meio AFK (rajadas com pausas de 3–7s); despachado, caminha até a mesa do passo; ao
+terminar, volta. `na tv` → `na baia`.
 
-Screenshots: `v3-palco-*.png`, `v3-sentado-*.png`, `v3-sprites-*.png`. Para regerar o patch:
-`python3 docs/viewer-v2/sprites-v3/patch_v3.py viewer/index.html` (parte do `index.html` da main).
+Verificado em chromium headless: chegada exata em `SEAT`, quadros alternando, PCs acendendo
+com a ocupação, 150 checagens do `viewer/test.mjs` passando. Para reaplicar em outra base:
+`python3 docs/viewer-v2/sprites-v4/patch_v4.py viewer/index.html` (parte do `index.html` da
+main + `fix/viewer-varredura`). Screenshots: `v4-*.png`.
 
 ## 5. Ferramentas de animação avaliadas
 
@@ -203,7 +198,7 @@ valendo — nenhuma depende de CSS) e com screenshots dark/light.
 
 ## 7. Decisões que são suas
 
-1. ~~A ou B~~ — decidido: estilo pixel-agents (v3), já na branch.
+1. ~~A ou B~~ — decidido: assets do pixel-agents, idênticos (v4), já na branch.
 2. ~~Banco sem TV~~ — decidido: baias 3×3 com AFK.
 3. **Grade pontilhada** no palco ou fundo liso?
 4. O segmentado `fluxo | gantt | runs` substitui os chips — ou você quer o Gantt como painel
