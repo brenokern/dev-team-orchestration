@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>team-view v2 — mockup</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ====== tokens: OS MESMOS do viewer (nada de cor nova) ====== */
+:root{
+  --bg:#050505; --core:#0a0a0b; --hair:rgba(255,255,255,.09); --hair-soft:rgba(255,255,255,.055);
+  --txt:rgba(255,255,255,.93); --dim:rgba(255,255,255,.47); --faint:rgba(255,255,255,.25);
+  --live:#34d399; --live-soft:rgba(52,211,153,.15); --live-dim:rgba(52,211,153,.34);
+  --hold:#f5b544; --hold-soft:rgba(245,181,68,.15); --hold-dim:rgba(245,181,68,.4);
+  --edge:rgba(255,255,255,.12); --edge-past:rgba(255,255,255,.24);
+  --body:#2b2b34; --body2:#3c3c48; --ink:rgba(255,255,255,.93);
+  /* sprite: contorno e roupa precisam de contraste com o fundo — no dark o contorno
+     #16161c de hoje some em #050505 */
+  --sp-out:#5c5c6a; --sp-shirt:#6a6a78; --sp-pants:#3a3a46;
+}
+[data-theme="light"]{
+  --bg:#f4f2ee; --core:#fbfaf8; --hair:rgba(20,20,24,.11); --hair-soft:rgba(20,20,24,.07);
+  --txt:#17171a; --dim:rgba(20,20,24,.56); --faint:rgba(20,20,24,.34);
+  --live:#0f9d63; --live-soft:rgba(15,157,99,.11); --live-dim:rgba(15,157,99,.34);
+  --hold:#b8770a; --hold-soft:rgba(184,119,10,.11); --hold-dim:rgba(184,119,10,.4);
+  --edge:rgba(20,20,24,.16); --edge-past:rgba(20,20,24,.3);
+  --body:#3a3a45; --body2:#50505e; --ink:#17171a;
+  --sp-out:#16161c; --sp-shirt:#50505e; --sp-pants:#2f2f3a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1a1e;color:#ddd;font-family:"Geist",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:28px}
+h1{font-weight:400;font-size:22px;letter-spacing:-.01em;margin-bottom:6px}
+.sub{color:#999;font-size:13px;max-width:70ch;line-height:1.5;margin-bottom:26px}
+h2{font-family:"Geist Mono",monospace;font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin:34px 0 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pane{background:var(--bg);color:var(--txt);border-radius:10px;padding:22px;min-height:120px;position:relative;overflow:hidden}
+.pane .lbl{position:absolute;top:8px;right:12px;font:10px "Geist Mono",monospace;color:var(--faint);letter-spacing:.08em}
+.row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.cap{font:10.5px "Geist Mono",monospace;color:var(--faint);margin-top:8px;letter-spacing:.04em}
+.sp{image-rendering:pixelated;display:block}
+
+/* ====== card v1 (como esta hoje) ====== */
+.v1{width:176px}
+.v1 .shell{border:3px solid var(--live-dim);border-radius:22px;padding:5px;background:var(--hair-soft)}
+.v1 .shell.pend{border-color:var(--edge)}
+.v1 .core{background:var(--core);border-radius:17px;padding:14px 14px 12px;min-height:120px;position:relative}
+.v1 .lay{font:9.5px "Geist Mono",monospace;letter-spacing:.18em;color:var(--live);text-transform:uppercase}
+.v1 .pend .lay{color:var(--faint)}
+.v1 .t{font-size:14.5px;line-height:1.28;margin-top:10px;font-weight:400}
+.v1 .f{border-top:1px solid var(--hair);margin-top:16px;padding-top:9px;text-align:right;font:11px "Geist Mono",monospace;color:var(--live)}
+.v1 .pend .f{color:var(--faint)}
+.v1 .chk{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:50%;background:var(--live);color:#052;display:grid;place-items:center;font-size:13px}
+
+/* ====== card v2 (proposta) ====== */
+.v2{width:200px;background:var(--core);border:1px solid var(--edge);border-radius:6px;padding:10px 12px 9px;position:relative;
+  transition:border-color .3s}
+.v2 .hd{display:flex;align-items:baseline;gap:8px;font:10.5px "Geist Mono",monospace;color:var(--dim)}
+.v2 .hd .id{color:var(--txt);font-weight:500}
+.v2 .hd .st{margin-left:auto;display:flex;align-items:center;gap:6px}
+.v2 .dot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+.v2.run{border-color:var(--live-dim)}
+.v2.run .dot{background:var(--live);box-shadow:0 0 0 3px var(--live-soft)}
+.v2.run .hd .st{color:var(--live)}
+.v2 .t{font-size:13px;line-height:1.35;margin:7px 0 9px;color:var(--txt);font-weight:400;letter-spacing:-.005em}
+.v2.pend .t{color:var(--dim)}
+.v2 .rail{height:3px;border-radius:2px;background:var(--hair);overflow:hidden;position:relative}
+.v2 .rail i{position:absolute;inset:0;width:var(--p,0%);background:var(--ink);border-radius:2px}
+.v2.run .rail i{background:var(--live);
+  background-image:repeating-linear-gradient(90deg,transparent 0 6px,rgba(255,255,255,.35) 6px 8px);
+  animation:rail 1.1s linear infinite}
+@keyframes rail{to{background-position:16px 0}}
+.v2.human .rail{background:transparent;border-top:2px dashed var(--hold-dim);height:0;border-radius:0}
+.v2.human{border-style:dashed;border-color:var(--hold-dim)}
+.v2.human .hd .st{color:var(--hold)} .v2.human .dot{background:var(--hold)}
+.v2 .m{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font:10px "Geist Mono",monospace;color:var(--dim);white-space:nowrap}
+.v2 .m b{color:var(--txt);font-weight:500}
+.v2.done .m .ok{color:var(--txt)}
+.v2 .xtra{font:9.5px "Geist Mono",monospace;color:var(--hold);border:1px solid var(--hold-dim);border-radius:3px;padding:1px 5px;margin-left:2px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.v2.run .rail i{animation:none}}
+
+/* ====== header ====== */
+.hdr{display:flex;align-items:center;gap:10px;font:11px "Geist Mono",monospace;color:var(--dim)}
+.chip{border:1px solid var(--edge);border-radius:999px;padding:5px 11px;color:var(--txt)}
+.seg{display:flex;border:1px solid var(--edge);border-radius:6px;overflow:hidden}
+.seg span{padding:5px 12px;color:var(--dim)}
+.seg span.on{background:var(--hair);color:var(--txt)}
+.sess{display:flex;align-items:center;gap:7px}
+.sess .d{width:6px;height:6px;border-radius:50%;background:var(--live)}
+.kebab{border:1px solid var(--edge);border-radius:6px;width:28px;height:26px;display:grid;place-items:center;color:var(--dim)}
+.tok{color:var(--txt)}
+
+/* ====== palco ====== */
+.stage{position:relative;height:290px;background:var(--bg);
+  background-image:radial-gradient(circle,var(--hair-soft) 1px,transparent 1px);background-size:18px 18px}
+.stage .v2{position:absolute}
+.edge{position:absolute;height:1px;background:var(--edge-past)}
+.edge.lit{background:var(--live-dim)}
+.desk{position:absolute}
+.bench{position:absolute}
+</style>
+</head>
+<body>
+<h1>team-view v2 — mockup de direção</h1>
+<p class="sub">Mesmos tokens de cor do viewer atual, mesmas fontes, mesmo motor de sprite (linhas de texto → <code>&lt;rect&gt;</code>). O que muda é o que a cor <em>significa</em>, a anatomia do card, e a proporção dos personagens. Esquerda dark, direita light, sempre.</p>
+
+<h2>1 · card — hoje vs. proposta (mesmos dados)</h2>
+<div class="two" id="cards"></div>
+
+<h2>2 · personagens — hoje (12×17, ~2 cabeças) vs. proposta A (16×32, ~4 cabeças, guarda-roupa neutro, papel no colarinho)</h2>
+<div class="two" id="chars"></div>
+
+<h2>3 · proposta B (provocação) — figuras de escala, vetor monocromático, mesmas quatro poses</h2>
+<div class="two" id="vec"></div>
+
+<h2>4 · cabeçalho — hoje: sete pílulas iguais · proposta: sessão + custo à esquerda, VISTAS como segmentado, ajustes num só menu</h2>
+<div class="two" id="hdr"></div>
+
+<h2>5 · composição — três cards, mesa, personagem sentado, banco do lounge (sem TV)</h2>
+<div class="two" id="stage"></div>
+
+<script>
+/* ---------- motor de sprite igual ao do viewer (largura parametrizada) ---------- */
+const OUT="var(--sp-out)",EYE="#141416",MOUTH="#8f4a3c",SHOE="var(--sp-out)";
+function sprite(rows,a,px,W,flip){
+  const C={O:OUT,H:a.h,h:a.hh||a.h,S:a.s||"#e8c39e",s:a.s2||"#d4a87f",E:EYE,M:MOUTH,A:a.a,D:SHOE,P:a.p||"var(--body)"};
+  let r="";
+  rows.forEach((row,y)=>{for(let x=0;x<row.length;x++){const c=row[x];if(c===".")continue;
+    const st=c==="B"?"var(--sp-shirt)":c==="b"?"var(--sp-pants)":c==="P"?"var(--sp-pants)":c==="O"||c==="D"?"var(--sp-out)":null;
+    r+= st?`<rect x="${x}" y="${y}" width="1" height="1" style="fill:${st}"/>`
+      :`<rect x="${x}" y="${y}" width="1" height="1" fill="${C[c]||C.S}"/>`;}});
+  return `<svg class="sp" width="${W*px}" height="${rows.length*px}" viewBox="0 0 ${W} ${rows.length}" shape-rendering="crispEdges"${flip?' style="transform:scaleX(-1)"':''}>${r}</svg>`;
+}
+/* v1: os dados de hoje */
+const HEAD1=["...OOOOOO...","..OHHHHHHO..",".OHHHHHHHHO.",".OHhhhhhhHO."];
+const FACE1=[".OSSSSSSSSO.",".OSESSSSESO.",".OSSSSSSSSO.",".OSsMMMMsSO.","..OSSSSSSO.."];
+const BODY1={stand:["..OBBBBBBO..",".OBBAAAABBO.",".OBBAAAABBO.",".ObBBBBBBbO.","..OBB..BBO..","..OBB..BBO..","..ODD..DDO..","...OO..OO..."],
+ walk0:["..OBBBBBBO..",".OBBAAAABBO.",".OBBAAAABBO.",".ObBBBBBBbO.",".OBB....BBO.",".OBB....BBO.",".ODD....DDO.","..OO....OO.."]};
+const SITBACK1=["...OOOOOO...","..OHHHHHHO..",".OHHHHHHHHO.",".OHHHHHHHHO.",".OHhhhhhhHO.",".OhHHHHHHhO.","..OSSSSSSO..","..OBBBBBBO..",".ObBBBBBBbO.",".OBBBBBBBBO.",".OBBBBBBBBO.","..OOOOOOOO.."];
+const v1=(pose,a,px)=>sprite(pose==="sitback"?SITBACK1:[...HEAD1,...FACE1,...BODY1[pose]],a,px,12).replace(/var\(--sp-out\)/g,"#16161c").replace(/var\(--sp-shirt\)/g,"var(--body)").replace(/var\(--sp-pants\)/g,"var(--body2)");
+/* v2: grades novas */
+const V2={"stand": ["......OOOO......", ".....OHHHHO.....", "....OHHHHHHO....", "....OHhHHHhO....", "....OSSSSSSO....", "....OSESSESO....", "....OSSSSSSO....", ".....OSSSSO.....", "......OSSO......", "....OBBAABBO....", "...OBBBBABBBO...", "..OBBBBBABBBBO..", "..ObBBBBABBBbO..", "..OSBBBBBBBBSO..", "..OSBBBBBBBBSO..", "...OBBBBBBBBO...", "...OPPPPPPPPO...", "...OPPPPPPPPO...", "...OPPPOOPPPO...", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...OPPPO.OPPPO..", "...ODDDO.ODDDO..", "...OOOOO.OOOOO..", "................", "................", "................"], "walk0": ["......OOOO......", ".....OHHHHO.....", "....OHHHHHHO....", "....OHhHHHhO....", "....OSSSSSSO....", "....OSESSESO....", "....OSSSSSSO....", ".....OSSSSO.....", "......OSSO......", "....OBBAABBO....", "...OBBBBABBBO...", "..OBBBBBABBBBO..", "..ObBBBBABBBbO..", "..OSBBBBBBBBSO..", "..OSBBBBBBBBSO..", "...OBBBBBBBBO...", "...OPPPPPPPPO...", "...OPPPPPPPPO...", "...OPPPOOPPPO...", "..OPPPO..OPPPO..", "..OPPPO...OPPPO.", ".OPPPO....OPPPO.", ".OPPPO.....OPPPO", ".OPPPO.....OPPPO", ".ODDDO.....OPPPO", ".OOOOO.....ODDDO", "...........OOOOO", "................", "................", "................", "................", "................"], "walk1": ["......OOOO......", ".....OHHHHO.....", "....OHHHHHHO....", "....OHhHHHhO....", "....OSSSSSSO....", "....OSESSESO....", "....OSSSSSSO....", ".....OSSSSO.....", "......OSSO......", "....OBBAABBO....", "...OBBBBABBBO...", "..OBBBBBABBBBO..", "..ObBBBBABBBbO..", "..OSBBBBBBBBSO..", "..OSBBBBBBBBSO..", "...OBBBBBBBBO...", "...OPPPPPPPPO...", "...OPPPPPPPPO...", "...OPPPOOPPPO...", "...OPPPO.OPPPO..", "....OPPPOPPPO...", "....OPPPOPPPO...", "....OPPPOPPPO...", "....OPPPOPPPO...", "....OPPPOPPPO...", "....ODDDODDDO...", "....OOOOOOOOO...", "................", "................", "................", "................", "................"], "sit": ["......OOOO......", ".....OHHHHO.....", "....OHHHHHHO....", "....OHhHHHhO....", "....OSSSSSSO....", "....OSESSESO....", "....OSSSSSSO....", ".....OSSSSO.....", "......OSSO......", "....OBBAABBO....", "...OBBBBABBBO...", "..OBBBBBABBBBO..", "..ObBBBBABBBbO..", "..OSBBBBBBBBSO..", "..OSBBBBBBBBSO..", "...OBBBBBBBBO...", "...OPPPPPPPPO...", "...OPPPPPPPPO...", "...OPPPPPPPPO...", "..OPPPPPPPPPPO..", "..OPPPO..OPPPO..", "..OPPPO..OPPPO..", "..OPPPO..OPPPO..", "..ODDDO..ODDDO..", "..OOOOO..OOOOO..", "................", "................", "................", "................", "................", "................", "................"], "sitback": ["......OOOO......", ".....OHHHHO.....", "....OHHHHHHO....", "....OHHHHHHO....", "....OHHHHHHO....", "....OHHhhHHO....", ".....OHHHHO.....", "......OSSO......", "....OBBBBBBO....", "...OBBBBBBBBO...", "..OBBBBBBBBBBO..", "..ObBBBBBBBBbO..", "..OBBBBBBBBBBO..", "..OBBBBBBBBBBO..", "...OBBBBBBBBO...", "...OPPPPPPPPO...", "...OOOOOOOOOO...", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................", "................"]};
+const v2=(pose,a,px,flip)=>sprite(V2[pose],a,px,16,flip);
+
+/* paletas: hoje = cabelo saturado por papel; proposta = cabelo natural, papel no colarinho (A) */
+const HOJE={backend:{h:"#8b5cf6",a:"#6d3fd6"},frontend:{h:"#f472b6",a:"#c0357f"},reviewer:{h:"#e4e4e9",a:"#9ca3af"},qa:{h:"#f59e0b",a:"#b45309"}};
+const PROP={ /* tons de cabelo/pele reais; acento do papel dessaturado: hsl(h 35% 55%) */
+  backend:{h:"#2a2320",s:"#c68d5a",s2:"#a9744a",a:"hsl(262 35% 55%)"},
+  frontend:{h:"#5a4033",s:"#e8c39e",s2:"#d4a87f",a:"hsl(330 35% 55%)"},
+  reviewer:{h:"#8a7f78",s:"#8d5a3b",s2:"#734830",a:"hsl(210 20% 60%)"},
+  qa:{h:"#b78c5c",s:"#e8c39e",s2:"#d4a87f",a:"hsl(38 40% 52%)"},
+  leader:{h:"#e4e4e9",s:"#e8c39e",s2:"#d4a87f",a:"var(--live)"}};
+
+/* ---------- 1. cards ---------- */
+const cardV1=(lay,t,f,st)=>`<div class="v1"><div class="shell ${st}"><div class="core"><div class="lay">${lay}</div>
+  ${st==="done"?'<div class="chk">✓</div>':""}<div class="t">${t}</div><div class="f">${f}</div></div></div></div>`;
+const cardV2=(o)=>`<div class="v2 ${o.st}"><div class="hd"><span class="id">${o.id}</span><span>${o.lay}</span>${o.xtra?`<span class="xtra">${o.xtra}</span>`:""}
+  <span class="st"><i class="dot"></i>${o.stt}</span></div>
+  <div class="t">${o.t}</div>
+  <div class="rail"><i style="--p:${o.p}%"></i></div>
+  <div class="m"><span>${o.m1}</span><span class="ok">${o.m2}</span></div></div>`;
+function cardsPane(theme){
+  return `<div class="pane" data-theme="${theme}"><span class="lbl">${theme}</span>
+  <div class="row" style="margin-bottom:22px">
+    ${cardV1("backend","10.2 service e controller","6 ações · 103s · 58.1k tok","done")}
+    ${cardV1("backend","1.3 regra de badge (teto 3, 10 dias)","0s","pend")}
+  </div><div class="cap">hoje — o card concluído e o pendente têm o mesmo peso; a métrica é a menor coisa da tela; verde em borda, rótulo, check e número ao mesmo tempo</div>
+  <div class="row" style="margin-top:22px">
+    ${cardV2({st:"done",id:"10.2",lay:"backend",stt:"1m43",t:"service e controller",p:100,m1:"6 ações · 58.1k",m2:"✓ 1m43"})}
+    ${cardV2({st:"run",id:"10.3",lay:"backend",stt:"0m31",t:"regra de badge (teto 3, 10 dias)",p:38,m1:"2 ações · —",m2:"backend-intern"})}
+    ${cardV2({st:"pend",id:"10.4",lay:"backend",stt:"—",t:"DTOs do feed: marcar vistas",p:0,m1:"—",m2:"aguardando 10.3"})}
+    ${cardV2({st:"human",id:"h1",lay:"humano",stt:"3m17",t:"rodar npx prisma migrate dev --create-only e me avisar",p:0,m1:"volte ao terminal",m2:"⏎"})}
+    ${cardV2({st:"done",id:"10.2",lay:"backend",xtra:"+1",stt:"2m40",t:"service e controller",p:100,m1:"9 ações · 96.1k",m2:"✓ 2 rodadas"})}
+  </div><div class="cap">proposta — id em mono, camada em cinza, <b>verde só no que está vivo</b>; a barra (rail) é o tempo do passo e o mesmo desenho do gantt; concluído = tinta, pendente = hairline</div></div>`;
+}
+document.getElementById("cards").innerHTML=cardsPane("dark")+cardsPane("light");
+
+/* ---------- 2. personagens ---------- */
+function charsPane(theme){
+  const roles=["backend","frontend","reviewer","qa"];
+  return `<div class="pane" data-theme="${theme}"><span class="lbl">${theme}</span>
+  <div class="row" style="align-items:flex-end;gap:26px">
+    ${roles.map(r=>`<div>${v1("stand",HOJE[r],3)}<div class="cap">${r}</div></div>`).join("")}
+    <div>${v1("walk0",HOJE.backend,3)}<div class="cap">andando</div></div>
+    <div>${v1("sitback",HOJE.frontend,3)}<div class="cap">no PC</div></div>
+  </div>
+  <div class="cap" style="margin:6px 0 22px">hoje — cabeça é metade do corpo; o papel é a cor do cabelo (roxo, rosa, laranja); lê-se como personagem de jogo</div>
+  <div class="row" style="align-items:flex-end;gap:26px">
+    ${roles.map(r=>`<div>${v2("stand",PROP[r],2)}<div class="cap">${r}</div></div>`).join("")}
+    <div>${v2("walk0",PROP.backend,2)}<div class="cap">andando</div></div>
+    <div>${v2("walk1",PROP.backend,2)}<div class="cap">andando ·2</div></div>
+    <div>${v2("sit",PROP.qa,2)}<div class="cap">no banco</div></div>
+    <div>${v2("sitback",PROP.frontend,2)}<div class="cap">no PC</div></div>
+    <div>${v2("stand",PROP.leader,2)}<div class="cap">leader</div></div>
+  </div>
+  <div class="cap" style="margin-top:6px">proposta A — 16×32 a 2px (32×64 na tela): ~4 cabeças, cabelo e pele em tons reais, roupa nos tokens <code>--body/--body2</code> (segue o tema), papel só no colarinho (2px, cor dessaturada). Poses idênticas às de hoje.</div></div>`;
+}
+document.getElementById("chars").innerHTML=charsPane("dark")+charsPane("light");
+
+/* ---------- 3. vetor ---------- */
+function fig(pose,acc){ /* figura de escala: tinta + 1 traço de acento */
+  const legs={stand:`<rect x="11" y="34" width="4" height="22" rx="1.5"/><rect x="17" y="34" width="4" height="22" rx="1.5"/>`,
+    walk:`<path d="M13 34 L9 55 L12 56 L16 38 Z"/><path d="M18 34 L23 54 L20 56 L15 38 Z"/>`,
+    sit:`<rect x="10" y="34" width="12" height="4" rx="1.5"/><rect x="10" y="36" width="4" height="14" rx="1.5"/><rect x="18" y="36" width="4" height="14" rx="1.5"/>`};
+  return `<svg width="32" height="58" viewBox="0 0 32 58" fill="var(--ink)" aria-hidden="true">
+    <circle cx="16" cy="7" r="5.2"/>
+    <path d="M9 15 h14 a2 2 0 0 1 2 2 v17 h-18 v-17 a2 2 0 0 1 2 -2z"/>
+    <rect x="9" y="15" width="14" height="2" fill="${acc}"/>
+    ${legs[pose]}</svg>`;
+}
+function vecPane(theme){
+  return `<div class="pane" data-theme="${theme}"><span class="lbl">${theme}</span>
+  <div class="row" style="align-items:flex-end;gap:26px">
+    <div>${fig("stand",PROP.backend.a)}<div class="cap">backend</div></div>
+    <div>${fig("stand",PROP.frontend.a)}<div class="cap">frontend</div></div>
+    <div>${fig("walk",PROP.reviewer.a)}<div class="cap">andando</div></div>
+    <div>${fig("sit",PROP.qa.a)}<div class="cap">sentado</div></div>
+    <div>${fig("stand","var(--live)")}<div class="cap">leader</div></div>
+  </div>
+  <div class="cap" style="margin-top:6px">B — silhuetas de maquete de arquitetura. O mais sóbrio possível; perde o charme pixel e a expressão (feliz/triste). Mesma lógica: andar = alternar dois conjuntos de pernas.</div></div>`;
+}
+document.getElementById("vec").innerHTML=vecPane("dark")+vecPane("light");
+
+/* ---------- 4. cabecalho ---------- */
+function hdrPane(theme){
+  return `<div class="pane" data-theme="${theme}"><span class="lbl">${theme}</span>
+  <div class="hdr" style="margin-bottom:18px"><span class="chip">◧</span><span class="chip sess"><i class="d"></i>sessão <b>22f17ceb</b></span><span class="chip">Σ <b>1.3M</b> tok</span>
+    <span style="flex:1"></span><span class="chip">gantt</span><span class="chip">runs</span><span class="chip">som <b style="color:var(--live)">on</b></span><span class="chip">tema dark</span><span class="chip">PT-BR</span><span class="chip">◫</span></div>
+  <div class="cap" style="margin-bottom:22px">hoje — vistas e ajustes no mesmo peso visual; sete decisões por linha</div>
+  <div class="hdr"><span class="sess"><i class="d"></i><span>22f17ceb</span></span><span class="tok">1.3M tok</span><span>·</span><span>4 / 17</span>
+    <span style="flex:1"></span><div class="seg"><span class="on">fluxo</span><span>gantt</span><span>runs</span></div><span class="kebab">⋯</span></div>
+  <div class="cap" style="margin-top:14px">proposta — o que você <i>lê</i> à esquerda (sessão, custo, progresso), o que você <i>escolhe ver</i> ao centro-direita, o que raramente mexe (som, tema, idioma, colunas) atrás de um menu. zen/fit/foco continuam na barra de zoom.</div></div>`;
+}
+document.getElementById("hdr").innerHTML=hdrPane("dark")+hdrPane("light");
+
+/* ---------- 5. composicao ---------- */
+function desk(){ /* mesa em tinta: 1 tampo, 2 pés, 1 monitor */
+  return `<svg width="64" height="30" viewBox="0 0 64 30" fill="var(--ink)" opacity=".85" aria-hidden="true">
+   <rect x="22" y="0" width="18" height="12" rx="1.5" fill="none" stroke="var(--ink)" stroke-width="1.5"/><rect x="29" y="12" width="4" height="3"/>
+   <rect x="0" y="16" width="64" height="3" rx="1"/><rect x="4" y="19" width="2.5" height="11"/><rect x="57.5" y="19" width="2.5" height="11"/></svg>`;}
+function bench(){ return `<svg width="120" height="26" viewBox="0 0 120 26" fill="var(--ink)" opacity=".7" aria-hidden="true">
+   <rect x="0" y="8" width="120" height="4" rx="1.5"/><rect x="8" y="12" width="2.5" height="14"/><rect x="109.5" y="12" width="2.5" height="14"/><rect x="0" y="0" width="120" height="2" rx="1" opacity=".5"/></svg>`;}
+function stagePane(theme){
+  return `<div class="pane stage" data-theme="${theme}" style="padding:0"><span class="lbl">${theme}</span>
+    <div class="edge" style="left:214px;top:76px;width:22px"></div><div class="edge lit" style="left:424px;top:76px;width:22px"></div>
+    <div style="position:absolute;left:26px;top:36px">${cardV2({st:"done",id:"10.1",lay:"backend",stt:"1m20",t:"predicado único de audiência",p:100,m1:"6 ações · 55.9k",m2:"✓"})}</div>
+    <div style="position:absolute;left:236px;top:36px">${cardV2({st:"done",id:"10.2",lay:"backend",stt:"1m43",t:"corpo: tempo de leitura e imagens",p:100,m1:"6 ações · 58.1k",m2:"✓"})}</div>
+    <div style="position:absolute;left:446px;top:36px">${cardV2({st:"run",id:"10.3",lay:"backend",stt:"0m31",t:"regra de badge (teto 3, 10 dias)",p:38,m1:"2 ações · —",m2:"backend-intern"})}</div>
+    <div style="position:absolute;left:516px;top:158px">${v2("sitback",PROP.backend,2)}</div>
+    <div class="desk" style="left:500px;top:186px">${desk()}</div>
+    <div style="position:absolute;left:330px;top:160px">${v2("walk1",PROP.leader,2,true)}</div>
+    <div style="position:absolute;left:54px;top:186px">${v2("sit",PROP.frontend,2)}</div>
+    <div style="position:absolute;left:98px;top:186px">${v2("sit",PROP.qa,2)}</div>
+    <div class="bench" style="left:40px;top:228px">${bench()}</div>
+    <div class="cap" style="position:absolute;left:26px;bottom:8px">grade pontilhada discreta no palco (referência de escala); lounge = banco + quem espera; sem TV, sem sofá rosa</div>
+  </div>`;
+}
+document.getElementById("stage").innerHTML=stagePane("dark")+stagePane("light");
+</script>
+</body>
+</html>
