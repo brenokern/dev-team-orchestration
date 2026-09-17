@@ -91,6 +91,10 @@ const PROBE = `(() => {
       tm: (n.querySelector('.n-tm') || {}).textContent || '',
       done: n.classList.contains('done') })),
     alturas: [...new Set([...document.querySelectorAll('.n-core')].map(c => c.style.height))],
+    streamTxt: [...document.querySelectorAll('#stream .ev .what')].map(e => e.textContent),
+    streamMarkup: document.querySelectorAll('#stream img, #stream script, #stream svg, #stream iframe').length,
+    pwned: !!window.__pwned,
+    statusTxt: (document.querySelector('#status-t') || {}).textContent || '',
     total: (document.querySelector('#c-tok') || {}).textContent || '',
     cnt: (document.querySelector('#cnt') || {}).textContent || ''
   };
@@ -198,11 +202,36 @@ async function rodar(cdp, fixture) {
       intrusos.map(s => s.id + " (" + s.owner + ")").join(", "));
   }
 
+  /* texto de hook e DADO: `<` de um grep tem que aparecer como `<`, e nada vira
+     elemento. (Antes: `grep '<Button>'` sumia do stream e <img onerror> executava.) */
+  const comMarkup = ev.filter(e => e.ev === "PreToolUse" && /<[a-z]/i.test(e.info || "")).map(e => e.info);
+  const sumiu = comMarkup.filter(info => !a.streamTxt.some(l => l.includes(info.slice(0, 40))));
+  ok(a.streamMarkup === 0 && !a.pwned, "stream nao interpreta HTML vindo dos eventos",
+    (a.streamMarkup ? a.streamMarkup + " elemento(s) injetado(s)" : "") + (a.pwned ? " | script executou" : ""));
+  if (comMarkup.length) ok(sumiu.length === 0, "texto com `<` chega inteiro no stream", sumiu.map(x => x.slice(0, 50)).join(" | "));
+
+  /* recon e pra stop PERDIDO: um re-despacho que acabou de comecar nao pode ser
+     fechado pelo tool_result da rodada anterior */
+  const reconCedo = a.streamTxt.filter((l, i) => /reconciliado/.test(l) &&
+    a.streamTxt.slice(Math.max(0, i - 3), i).some(x => /^iniciou /.test(x)));
+  ok(reconCedo.length === 0, "recon nao fecha passo que acabou de (re)comecar", reconCedo.join(" | "));
+
   ok(a.alturas.length === 1 && a.alturas[0] !== "auto",
     "todos os cards com a mesma altura (fonts.ready terminou)",
     "alturas: " + JSON.stringify(a.alturas));
 
   ok(cdp.errors.length === 0, "zero excecao nao tratada na 1a carga", cdp.errors.slice(0, 2).join(" | "));
+
+  /* ---- silencio longo: agente vivo num build de 6 min ---- */
+  if (a.steps.some(s => s.status === "running")) {
+    await cdp.evaluate("(()=>{const r=Date.now.bind(Date);Date.now=()=>r()+6*60*1000;return 1})()");
+    await sleep(11500); /* o watchdog roda a cada 10s */
+    const q = await cdp.evaluate(PROBE);
+    ok(q.steps.some(s => s.status === "running") && !/encerrad|ended/.test(q.statusTxt),
+      "6 min sem eventos nao encerra a cena nem fecha passo vivo",
+      "status='" + q.statusTxt + "' running=" + q.steps.filter(s => s.status === "running").map(s => s.id).join(","));
+    await cdp.evaluate("(()=>{delete Date.now;return 1})()"); /* volta o relogio nativo do prototipo */
+  }
 
   /* ---- F5 ---- */
   cdp.errors.length = 0;
@@ -260,6 +289,46 @@ await cdp.send("Page.enable");
 
 console.log("viewer/test.mjs — " + fixtures.length + " fixture(s), chrome: " + path.basename(chrome));
 for (const f of fixtures) await rodar(cdp, f);
+
+/* ---------- ponteiro de sessao: hook solto de outra sessao nao rouba o viewer ---------- */
+console.log("\n\x1b[1mponteiro de sessao (cli sem --session)\x1b[0m");
+{
+  const cwdKey = c => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h.toString(36); };
+  const cwd = process.cwd(), key = cwdKey(cwd);
+  const ev = fs.readFileSync(path.join(HERE, "fixtures", "stop-assincrono.ndjson"), "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
+  const fim = ev[ev.length - 1].t, agora = Date.now();
+  fs.writeFileSync(path.join(DIR, "tv-run.ndjson"), ev.slice(0, 20).map(e => JSON.stringify({ ...e, t: agora - (fim - e.t) })).join("\n") + "\n");
+  fs.writeFileSync(path.join(DIR, "tv-stray.ndjson"), JSON.stringify({ t: agora, ev: "PreToolUse", tool: "Bash", info: "ls" }) + "\n");
+  const ptrs = ["latest-" + key, "run-" + key, "latest"].map(n => path.join(DIR, n));
+  const bak = ptrs.map(p => { try { return fs.readFileSync(p, "utf8"); } catch { return null; } });
+  try {
+    fs.writeFileSync(ptrs[0], "tv-run"); fs.writeFileSync(ptrs[1], "tv-run");
+    const PORT2 = PORT + 1;
+    const srv2 = spawn(process.execPath, [path.join(HERE, "cli.mjs"), "--port", String(PORT2)], { stdio: "ignore", detached: true, cwd });
+    await sleep(900);
+    cdp.errors.length = 0;
+    await cdp.send("Page.navigate", { url: "http://localhost:" + PORT2 });
+    await sleep(4000);
+    const q1 = await cdp.evaluate(PROBE);
+    ok(q1.steps.length > 0, "viewer sem --session acha a run pelo ponteiro (" + q1.steps.length + " passos)");
+    /* outra sessao do Claude Code no mesmo cwd dispara um hook: latest-<cwd> muda, run-<cwd> nao */
+    fs.writeFileSync(ptrs[0], "tv-stray");
+    await sleep(2500);
+    const q2 = await cdp.evaluate(PROBE);
+    ok(q2.steps.length === q1.steps.length, "hook solto de outra sessao nao rouba o viewer da run",
+      "passos depois do hook alheio: " + q2.steps.length);
+    /* e mesmo se o ponteiro da RUN apontasse pra sessao sem plano, o cli nao troca */
+    fs.writeFileSync(ptrs[1], "tv-stray");
+    await sleep(2500);
+    const q3 = await cdp.evaluate(PROBE);
+    ok(q3.steps.length === q1.steps.length, "cli nunca troca de sessao COM plano para sessao SEM plano",
+      "passos: " + q3.steps.length);
+    try { process.kill(-srv2.pid); } catch {}
+  } finally {
+    ptrs.forEach((p, i) => { try { bak[i] == null ? fs.rmSync(p, { force: true }) : fs.writeFileSync(p, bak[i]); } catch {} });
+    try { fs.rmSync(path.join(DIR, "tv-run.ndjson"), { force: true }); fs.rmSync(path.join(DIR, "tv-stray.ndjson"), { force: true }); } catch {}
+  }
+}
 
 console.log("\n" + (falhas ? "\x1b[31m" + falhas + " de " + checks + " checagens falharam\x1b[0m"
   : "\x1b[32m" + checks + " checagens, todas passaram\x1b[0m"));
