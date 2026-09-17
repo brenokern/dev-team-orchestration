@@ -181,10 +181,21 @@ Fontes: [Remotion — Agent Skills](https://www.remotion.dev/docs/ai/skills) ·
 [Slynyrd — Pixelblog 17: Human Anatomy](https://www.slynyrd.com/blog/2019/5/21/pixelblog-17-human-anatomy) ·
 [Tella — Remotion skills com Claude Code](https://www.tella.com/blog/how-to-use-remotion-agent-skills-with-claude-code)
 
-## 6. Plano de implementação (sem mudar a estrutura)
+## 6. Plano de implementação (sem mudar a estrutura) — **entregue na branch**
 
-Cada fase é um PR pequeno, verificável com `node viewer/test.mjs` (as 150 checagens continuam
-valendo — nenhuma depende de CSS) e com screenshots dark/light.
+Tudo aplicado por `docs/viewer-v2/ui-v2/patch_ui2.py` sobre o `viewer/index.html` v4 (as
+substituições são exatas e verificadas — reaplicável em outra base). `node viewer/test.mjs`:
+150 checagens passando. Screenshots: `ui2-*.png`.
+
+**Tamanho dos cards (ponto de atenção do Breno):** a regra continua a mesma — largura fixa
+(`CARD_W` 192) e altura uniforme por run: mede-se o card que mais precisa (título nunca corta) e
+todos os cards da run recebem essa altura, remedida quando a fonte web carrega. O conteúdo é
+responsivo dentro dela: título ocupa o que sobra (`flex:1`), rail e métricas ficam ancorados na
+base. Um `ROWGAP` de 236 acomoda card + estação (mesa/PC/cadeira) + folga.
+
+O que ficou fora, de propósito: o cronômetro na linha 1 (a duração já está nas métricas, junto
+das ações e do token — uma fonte só, `cardTxt`); o `n-who` só aparece quando o dono difere da
+camada ("frontend · frontend" não dizia nada).
 
 1. **Tokens + card + cabeçalho.** CSS do card v2, regra de uso do verde, `COLW/ROWGAP` novos,
    segmentado + menu. Zero mudança de JS de estado. *Risco: baixo.*
@@ -200,9 +211,9 @@ valendo — nenhuma depende de CSS) e com screenshots dark/light.
 
 1. ~~A ou B~~ — decidido: assets do pixel-agents, idênticos (v4), já na branch.
 2. ~~Banco sem TV~~ — decidido: baias 3×3 com AFK.
-3. **Grade pontilhada** no palco ou fundo liso?
-4. O segmentado `fluxo | gantt | runs` substitui os chips — ou você quer o Gantt como painel
-   lateral inferior permanente, já que agora ele é o mesmo desenho dos cards?
+3. ~~Grade pontilhada~~ — decidido: grade pontilhada (`--hair`, 18px).
+4. ~~Segmentado ou painel~~ — decidido: segmentado `fluxo | gantt | runs` + menu `⋯`
+   (som, tema, idioma).
 
 ## 8. Varredura de bugs (branch `fix/viewer-varredura`)
 

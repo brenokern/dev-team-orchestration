@@ -34,14 +34,10 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overflow:hidden;
   transition:background .7s var(--ease),color .7s var(--ease)}
-.mesh{position:fixed;inset:0;pointer-events:none;z-index:0}
-.orb{position:absolute;border-radius:50%;filter:blur(130px);opacity:.5}
-[data-theme="light"] .orb{opacity:.34;filter:blur(150px)}
-.orb.a{width:660px;height:660px;left:-14%;top:-24%;background:rgba(52,211,153,.11)}
-.orb.b{width:740px;height:740px;right:-16%;bottom:-30%;background:rgba(99,102,241,.11)}
-.grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-[data-theme="light"] .grain{opacity:.018}
+/* palco: grade pontilhada discreta como referência de escala — sem orbs, sem grain, sem glow */
+.stage{background-image:radial-gradient(var(--hair) 1px,transparent 1px);background-size:18px 18px}
+/* movimento reduzido: rail parado, sem pulso; o JS teleporta em vez de caminhar */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
 .app{position:relative;z-index:1;height:100vh;display:grid;
   --colL:250px;--colR:328px;
   grid-template-columns:var(--colL) minmax(0,1fr) var(--colR);gap:13px;padding:13px;
@@ -74,9 +70,8 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .ph{padding:15px 17px 11px;display:flex;align-items:center;justify-content:space-between;flex:0 0 auto}
 .ph h2{font-size:10px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
 .count{font-family:"Geist Mono",monospace;font-size:10px;color:var(--faint)}
-.lead{margin:0 12px 10px;flex:0 0 auto;background:var(--shell);border:1px solid var(--hair-soft);
-  border-radius:17px;padding:5px}
-.lead-c{background:var(--core-2);border-radius:12px;padding:11px 12px;position:relative;overflow:hidden}
+.lead{margin:0 12px 10px;flex:0 0 auto}
+.lead-c{background:var(--core-2);border:1px solid var(--hair);border-radius:10px;padding:11px 12px;position:relative;overflow:hidden}
 .lead-c::after{content:"";position:absolute;top:0;bottom:0;width:40%;
   background:linear-gradient(90deg,transparent,var(--hold-soft),transparent);transform:translateX(-130%)}
 .lead-c.scan::after{animation:sweep 3.2s cubic-bezier(.4,0,.2,1) infinite}
@@ -98,23 +93,37 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .rmod{font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint);letter-spacing:.05em;margin-top:1px}
 .rs{font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint);letter-spacing:.05em;flex:0 0 auto}
 .row.act .rs{color:var(--live)}
-.strip{flex:0 0 auto;padding:12px 16px;display:flex;align-items:center;gap:8px;
-  border-bottom:1px solid var(--hair-soft)}
-.chip{display:inline-flex;align-items:center;gap:7px;background:var(--shell);
-  border:1px solid var(--hair-soft);border-radius:999px;padding:6px 13px;
-  font-family:"Geist Mono",monospace;font-size:9.5px;line-height:1;
-  color:var(--dim);letter-spacing:.04em;cursor:default;white-space:nowrap;
-  transition:background .45s var(--ease),border-color .45s var(--ease),transform .45s var(--ease)}
+.strip{flex:0 0 auto;padding:10px 14px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--hair-soft);position:relative}
+/* o que se LÊ: sessão · tokens · progresso — texto, não pílulas */
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 8px;
+  font-family:"Geist Mono",monospace;font-size:10px;line-height:1;
+  color:var(--dim);letter-spacing:.02em;cursor:default;white-space:nowrap}
 .chip b{font-weight:500;color:var(--txt)}
-.chip .d{width:5px;height:5px;border-radius:50%;background:var(--faint)}
+.chip .d{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .chip.ok .d{background:var(--live)}
-.chip.ok b{color:var(--live)}
 .chip.warn .d{background:var(--hold)}
-.chip.warn b{color:var(--hold)}
 .chip.off{opacity:.55}
-.chip.btn{cursor:pointer;background:var(--hair);border-color:var(--edge-past);color:var(--txt);padding:7px 14px}
-.chip.btn:hover{background:var(--edge-past);transform:translateY(-1px)}
+.chip.sep{color:var(--faint);padding:0}
+/* o que se ESCOLHE VER: segmentado fluxo | gantt | runs */
+.seg{display:inline-flex;background:var(--shell);border:1px solid var(--hair-soft);border-radius:9px;padding:2px;gap:2px}
+.seg .chip.btn{border-radius:7px;padding:6px 11px;color:var(--dim);cursor:pointer;
+  transition:background .3s var(--ease),color .3s var(--ease)}
+.seg .chip.btn:hover{color:var(--txt)}
+.seg .chip.btn.ok{background:var(--core-2);color:var(--txt);box-shadow:0 1px 2px var(--shad)}
+/* botões soltos (colunas, menu) */
+.chip.btn{cursor:pointer;border-radius:8px;color:var(--dim)}
+.chip.btn:hover{background:var(--hair-soft);color:var(--txt)}
 .chip.btn:active{transform:scale(.96)}
+.chip.btn.icon{font-size:13px;padding:4px 8px}
+/* menu ⋯ : o que raramente muda (som, tema, idioma) */
+.menu{position:absolute;right:52px;top:calc(100% + 6px);z-index:30;display:none;flex-direction:column;gap:2px;
+  min-width:150px;background:var(--core-2);border:1px solid var(--hair);border-radius:11px;padding:5px;
+  box-shadow:0 10px 30px var(--shad)}
+.menu.on{display:flex}
+.menu .chip.btn{justify-content:space-between;padding:8px 10px;border-radius:7px}
+.menu .chip.btn b{color:var(--dim);font-weight:400}
+.menu .chip.btn.ok b{color:var(--txt)}
 .strip .grow{flex:1}
 .stagewrap{flex:1;position:relative;overflow:hidden;min-height:0;cursor:grab}
 .stagewrap.drag{cursor:grabbing}
@@ -123,43 +132,68 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .edges path{fill:none;stroke:var(--edge);stroke-width:1.6;stroke-linecap:round;
   transition:stroke .6s var(--ease)}
 .edges path.lit{stroke:var(--live-dim)}
-.edges path.past{stroke:var(--live-dim)} /* trajeto concluido fica verde */
+.edges path.past{stroke:var(--edge-past)} /* trajeto concluído fica em tinta; verde só leva ao ativo */
 /* centralizacao via GSAP (x/y em px pos-medicao) — translate % aqui seria
    congelado em px pelo gsap ANTES da altura uniforme, desalinhando portas */
-.node{position:absolute;width:176px;opacity:0}
-.n-shell{background:var(--shell);border:1px solid var(--hair-soft);border-radius:20px;padding:5px;
+.node{position:absolute;width:192px;opacity:0}
+/* card v2: uma borda, um raio, e o RAIL como assinatura. Verde = só o que roda agora. */
+.n-shell{transition:none}
+.n-core{background:var(--core-2);border:1px solid var(--hair);border-radius:8px;padding:9px 11px 8px;
+  position:relative;overflow:hidden;min-height:78px;display:flex;flex-direction:column;
   transition:border-color .6s var(--ease),background .6s var(--ease)}
-.n-core{background:var(--core-2);border-radius:15px;padding:11px 12px;position:relative;overflow:hidden;
-  min-height:100px;display:flex;flex-direction:column;transition:background .6s var(--ease)}
-.node.active .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
-.node.done .n-shell{border-color:var(--live-dim);background:var(--live-soft)}
-.node.done .n-lay{color:var(--live)}
-.node.done .n-check{background:var(--live);color:var(--bg)}
-.node.done .n-tm{opacity:1;color:var(--live)} /* metricas finais ficam no card */
-.node.humc.done .n-shell{border-style:solid;border-color:var(--live-dim);background:var(--live-soft);animation:none}
-.n-lay{font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.2em;
-  text-transform:uppercase;color:var(--faint);transition:color .6s var(--ease)}
-.n-subs{display:none;font-size:8px;letter-spacing:.08em;color:var(--hold);
-  border:1px solid var(--hold-dim);border-radius:999px;padding:1px 7px;margin-left:6px;
-  vertical-align:1px;cursor:pointer}
+.node.active .n-core{border-color:var(--live-dim)}
+.node.done .n-core{border-color:var(--edge-past)}
+/* linha 1: id · camada · estado */
+.n-h{display:flex;align-items:center;gap:6px;font-family:"Geist Mono",monospace;font-size:10.5px;line-height:1;min-width:0}
+.n-id{font-weight:500;color:var(--faint);transition:color .6s var(--ease)}
+.node.active .n-id,.node.done .n-id{color:var(--txt)}
+.n-lay{color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;
+  transition:color .6s var(--ease)}
+.node.active .n-lay,.node.done .n-lay{color:var(--dim)}
+.n-dot{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:0 0 6px;transition:background .6s var(--ease)}
+.node.active .n-dot{background:var(--live);animation:bl 1.15s ease-in-out infinite}
+.node.done .n-dot{background:var(--txt);animation:none}
+.node.humc .n-dot{background:var(--hold-dim)}
+.node.humc.active .n-dot{background:var(--hold)}
+.node.humc.done .n-dot{background:var(--txt)}
+.n-subs{display:none;font-size:9px;color:var(--hold);border:1px solid var(--hold-dim);border-radius:999px;
+  padding:1px 6px;cursor:pointer;line-height:1.2}
 .n-subs.on{display:inline-block}
-.node.active .n-lay{color:var(--live)}
-.n-t{font-size:12.5px;line-height:1.35;margin-top:6px;letter-spacing:-.012em;color:var(--dim);
-  flex:1;transition:color .6s var(--ease)} /* NUNCA corta: o card cresce (altura uniforme = a do maior) */
+/* título: sans, nunca corta — o card cresce e todos os cards da run seguem o maior */
+.n-t{font-size:12.5px;line-height:1.35;margin-top:6px;letter-spacing:-.01em;color:var(--dim);
+  flex:1;transition:color .6s var(--ease)}
 .node.active .n-t,.node.done .n-t{color:var(--txt)}
-.n-f{display:flex;align-items:center;justify-content:flex-end;margin-top:8px;
-  padding-top:8px;border-top:1px solid var(--hair-soft)}
-.n-tm{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);opacity:0;
-  white-space:nowrap}
-.node.active .n-tm{opacity:1;color:var(--live)}
-.n-check{position:absolute;top:10px;right:11px;width:15px;height:15px;border-radius:50%;
+/* RAIL: a mesma barra do Gantt, deitada no card */
+.n-rail{height:3px;border-radius:2px;background:var(--hair-soft);margin-top:8px;overflow:hidden;position:relative}
+.n-rail i{position:absolute;inset:0;border-radius:2px;background:var(--hair);transform-origin:left;transform:scaleX(0);
+  transition:transform .6s var(--ease),background .6s var(--ease)}
+.node.active .n-rail i{transform:none;
+  background:repeating-linear-gradient(90deg,var(--live) 0 8px,transparent 8px 14px);background-size:14px 3px;
+  animation:railrun 1s linear infinite}
+@keyframes railrun{to{background-position:14px 0}}
+.node.done .n-rail i{transform:none;background:var(--txt);animation:none}
+.node.humc .n-rail i{transform:none;background:repeating-linear-gradient(90deg,var(--hold-dim) 0 5px,transparent 5px 9px)}
+.node.humc.active .n-rail i{background:repeating-linear-gradient(90deg,var(--hold) 0 8px,transparent 8px 14px);animation:railrun 1s linear infinite}
+.node.humc.done .n-rail i{background:var(--txt);animation:none}
+/* linha final: métricas (mono) · quem */
+.n-f{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;
+  font-family:"Geist Mono",monospace;font-size:10px;line-height:1;color:var(--faint)}
+.n-tm{white-space:nowrap;color:var(--faint);transition:color .6s var(--ease)}
+.node.active .n-tm{color:var(--live)}
+.node.done .n-tm{color:var(--txt)}
+.node.humc.active .n-tm{color:var(--hold)}
+.n-who{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--faint);flex:0 1 auto;min-width:0}
+.n-who:empty{display:none}
+.n-check{position:absolute;top:7px;right:9px;width:14px;height:14px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
   opacity:0;transform:scale(.5)}
-/* card com veredito: inteiro clicavel */
+.node.done .n-check{background:var(--txt);color:var(--bg)}
+.node.done .n-dot{display:none} /* o check ocupa o lugar do ponto */
+/* card com veredito: inteiro clicável */
 .node.hasnotes{cursor:pointer}
-.node.hasnotes:hover .n-shell{border-color:var(--edge-past)}
-/* notificacao de veredito do leader no card */
-.n-note{position:absolute;top:5px;right:6px;width:11px;height:11px;border-radius:50%;
+.node.hasnotes:hover .n-core{border-color:var(--edge-past)}
+/* notificação de veredito do leader no card */
+.n-note{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;
   background:#e24b4a;border:1.5px solid var(--core-2);cursor:pointer;padding:0;z-index:3;
   pointer-events:auto;animation:notep 1.6s ease-in-out 3}
 @keyframes notep{50%{transform:scale(1.35)}}
@@ -169,44 +203,38 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   background:rgba(0,0,0,.35);backdrop-filter:blur(3px)}
 .dlgwrap.on{display:grid}
 .dlg{width:min(460px,86%);background:var(--core-2);border:1px solid var(--hair);
-  border-radius:18px;padding:18px 20px}
+  border-radius:14px;padding:18px 20px}
 .dlg .dt{font-size:13px;font-weight:500;letter-spacing:-.01em;margin-bottom:2px}
-.dlg .ds{font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);
-  letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}
-.dlg .dh{font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--faint);margin:10px 0 7px}
+.dlg .ds{font-family:"Geist Mono",monospace;font-size:10px;color:var(--faint);margin-bottom:12px}
+.dlg .dh{font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--faint);margin:10px 0 7px}
 .dlg .dm{font-family:"Geist Mono",monospace;font-size:10.5px;line-height:1.7;color:var(--txt);
-  background:var(--live-soft);border:1px solid var(--live-dim);border-radius:11px;
+  background:var(--shell);border:1px solid var(--hair);border-radius:9px;
   padding:10px 12px;margin-bottom:8px;word-break:break-word}
 .dlg .dm.sub{background:var(--shell);border-color:var(--hair)}
 .dlg .dm.sub.run{border-color:var(--live-dim)}
 .dlg .dx{margin-top:8px;float:right;font-family:inherit;font-size:11px;color:var(--txt);
-  background:var(--hair);border:1px solid var(--edge-past);border-radius:999px;
+  background:var(--hair);border:1px solid var(--edge-past);border-radius:8px;
   padding:7px 16px;cursor:pointer;transition:transform .4s var(--ease)}
 .dlg .dx:active{transform:scale(.96)}
-/* portas de conexao nas bordas do card */
-.p-in,.p-out{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;
+/* portas de conexão nas bordas do card */
+.p-in,.p-out{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;
   transform:translateY(-50%);z-index:2;background:var(--core-2);
   border:1.5px solid var(--edge-past);transition:border-color .6s var(--ease)}
-.p-in{left:-5px}.p-out{right:-5px}
+.p-in{left:-4px}.p-out{right:-4px}
 .node.active .p-in{border-color:var(--live)}
-.node.done .p-in,.node.done .p-out{border-color:var(--live)}
+.node.done .p-in,.node.done .p-out{border-color:var(--txt)}
 .node.humc .p-in,.node.humc .p-out{border-color:var(--hold-dim)}
-.node.humc.done .p-in,.node.humc.done .p-out{border-color:var(--live)}
-.node.humc .n-shell{border:1px dashed var(--hold-dim)}
-/* passo removido na escalacao */
+.node.humc.done .p-in,.node.humc.done .p-out{border-color:var(--txt)}
+.node.humc .n-core{border-style:dashed;border-color:var(--hold-dim)}
+/* passo removido na escalação */
 .node.skipped{opacity:.4}
-.node.skipped .n-shell{border-style:dashed}
-/* passo extra (subfluxo criado em runtime por correcoes) */
-.node.dync .n-shell{border:1px dashed var(--edge-past)}
-.node.dync .n-lay{color:var(--faint)}
+.node.skipped .n-core{border-style:dashed}
+/* passo extra (subfluxo criado em runtime por correções) */
+.node.dync .n-core{border-style:dashed}
 .edges path.dyn{stroke-dasharray:5 6}
 .node.humc .n-lay{color:var(--hold)}
-.node.humc.active .n-shell{border-style:solid;border-color:var(--hold);background:var(--hold-soft);
-  animation:gpulse 1.3s ease-in-out infinite}
-@keyframes gpulse{50%{opacity:.72}}
+.node.humc.active .n-core{border-style:solid;border-color:var(--hold)}
 .node.humc.active .n-t{color:var(--txt)}
-.node.humc.active .n-tm{opacity:1;color:var(--hold)}
 .sp{image-rendering:pixelated;display:block}
 .tok{position:absolute;z-index:6;pointer-events:none;
   display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -214,7 +242,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .tok .badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:-6px;
   font-family:"Geist Mono",monospace;font-size:8.5px;letter-spacing:.06em;
   color:var(--dim);opacity:0;transition:opacity .4s var(--ease);white-space:nowrap}
-.tok.busy .badge{opacity:1;color:var(--live)}
+.tok.busy .badge{opacity:1;color:var(--dim)}
 .tok.lead .badge{opacity:1;color:var(--txt)}
 .furn{position:absolute;z-index:2;pointer-events:none}
 .furn.chair{z-index:7} /* encosto NA FRENTE do personagem sentado */
@@ -222,16 +250,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .furn svg{position:relative;z-index:1}
 .fshadow{position:absolute;z-index:0;border-radius:50%;
   background:radial-gradient(ellipse at center,var(--shad),transparent 68%)}
-.tvscr{animation:tvf 1.3s steps(2) infinite}
-@keyframes tvf{0%{fill:#5b7ba6}50%{fill:#8fa8c9}}
-.tvglow{position:absolute;pointer-events:none;z-index:0;
-  clip-path:polygon(0 36%,100% 0,100% 100%,0 64%);
-  background:linear-gradient(90deg,var(--glow),transparent 85%);
-  animation:glowf 1.3s steps(2) infinite}
-@keyframes glowf{0%{opacity:.55}50%{opacity:1}}
-.pulse{position:absolute;width:56px;height:56px;border-radius:16px;border:1.5px solid var(--live);
-  z-index:4;pointer-events:none;opacity:0}
-.pulse.h{border-color:var(--hold)}
+
 /* balao de pensamento: etereo, centralizado na cabeca do personagem */
 .think{position:absolute;z-index:7;width:max-content;max-width:172px;pointer-events:none;opacity:0;
   font-family:"Geist Mono",monospace;font-size:8.5px;line-height:1.55;color:var(--faint);
@@ -264,7 +283,7 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   padding:0 9px;border-radius:9px;cursor:pointer;
   transition:background .4s var(--ease),transform .4s var(--ease)}
 .zoom button:hover{background:var(--hair);transform:translateY(-1px)}
-.zoom button.on{background:var(--live-soft);border-color:var(--live-dim);color:var(--live)}
+.zoom button.on{background:var(--hair);border-color:var(--edge-past);color:var(--txt)}
 .zoom button:active{transform:scale(.95)}
 .zoom .lv{font-family:"Geist Mono",monospace;font-size:9.5px;color:var(--dim);min-width:38px;text-align:center}
 .status{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;
@@ -273,19 +292,32 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .status .d{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .status.live .d{background:var(--live)}
 .status.dead .d{background:#e24b4a}
-.stream{padding:0 13px 13px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:2px}
-.ev{display:flex;flex-direction:column;gap:1px;padding:6px 9px;border-radius:9px;
+.stream{padding:0 13px 13px;overflow-y:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:1px}
+/* cabeçalho de grupo: um por passo (id · título · camada · N ações) */
+.evh{display:flex;align-items:baseline;gap:7px;padding:9px 9px 4px;margin-top:6px;
+  font-family:"Geist Mono",monospace;font-size:10px;line-height:1.4;color:var(--dim);
+  border-top:1px solid var(--hair-soft)}
+.evh:first-child{border-top:0;margin-top:0}
+.evh .hid{font-weight:500;color:var(--txt);flex:0 0 auto}
+.evh .ht{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt)}
+.evh .hm{flex:0 0 auto;color:var(--faint);white-space:nowrap}
+.evh.run .hid,.evh.run .hm{color:var(--live)}
+.evh.hum .hid{color:var(--hold)}
+/* linhas: tool calls indentadas sob o cabeçalho, papel em mono cinza */
+.ev{display:flex;gap:8px;padding:3px 9px;border-radius:7px;
   font-family:"Geist Mono",monospace;font-size:10px;line-height:1.5;opacity:0}
-.ev .who{color:var(--live);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+.ev.sub{padding-left:22px}
+.ev .who{color:var(--faint);flex:0 0 auto;min-width:0;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev.sys .who{color:var(--faint)}
 .ev.hum .who{color:var(--hold)}
-.ev .what{color:var(--dim);word-break:break-word;min-width:0}
+.ev .what{color:var(--dim);word-break:break-word;min-width:0;flex:1}
 .ev.rep{background:var(--shell)}
 .ev.rep .what{color:var(--txt)}
 .ev.hum{background:var(--hold-soft)}
 .ev.hum .what{color:var(--txt)}
-.ev.note{background:var(--live-soft);border:1px solid var(--live-dim)}
-.ev.note .who{color:var(--live)}
+/* veredito do leader: callout em tinta, com a barra lateral */
+.ev.note{background:var(--shell);border-left:2px solid var(--txt);border-radius:0 7px 7px 0;padding:6px 9px;margin:4px 0}
+.ev.note .who{color:var(--txt)}
 .ev.note .what{color:var(--txt)}
 .empty{flex:1;display:grid;place-items:center;color:var(--faint);
   font-family:"Geist Mono",monospace;font-size:11px;text-align:center;line-height:2}
@@ -309,8 +341,8 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 .runrow .rr-t{flex:1;min-width:0}
 .runrow .rr-n{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .runrow .rr-m{font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint);margin-top:2px}
-.runrow .rr-live{font-family:"Geist Mono",monospace;font-size:8px;color:var(--live);
-  border:1px solid var(--live-dim);border-radius:999px;padding:2px 8px}
+.runrow .rr-live{font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--live);display:flex;align-items:center;gap:5px}
+.runrow .rr-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--live)}
 /* ---- diff do commit no dialog ---- */
 .diffpre{font-family:"Geist Mono",monospace;font-size:9.5px;line-height:1.6;color:var(--txt);
   background:var(--shell);border:1px solid var(--hair);border-radius:11px;padding:10px 12px;
@@ -322,26 +354,30 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
   padding:3px 10px;cursor:pointer;margin-left:8px}
 /* ---- gantt / timeline por papel ---- */
 .gantt{position:absolute;inset:0;z-index:15;display:none;overflow:auto;
-  background:var(--core);padding:22px 24px 60px}
+  background:var(--core);padding:22px 28px 60px}
 .gantt.on{display:block}
-.g-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
-.g-name{width:110px;flex:0 0 110px;font-family:"Geist Mono",monospace;font-size:9px;
+.g-row{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.g-name{width:96px;flex:0 0 96px;font-family:"Geist Mono",monospace;font-size:10px;
   color:var(--dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.g-lane{flex:1;position:relative;height:22px;background:var(--shell);border-radius:7px}
-.g-bar{position:absolute;top:3px;bottom:3px;border-radius:5px;background:var(--live-soft);
-  border:1px solid var(--live-dim);font-family:"Geist Mono",monospace;font-size:8px;
-  color:var(--txt);display:flex;align-items:center;padding:0 5px;overflow:hidden;
-  white-space:nowrap;cursor:default;min-width:3px}
-.g-bar.run{background:var(--live-soft);border-color:var(--live);animation:gpulse 1.3s ease-in-out infinite}
-.g-bar.hum{background:var(--hold-soft);border-color:var(--hold-dim);color:var(--hold)}
-.g-axis{display:flex;justify-content:space-between;margin:4px 0 14px 120px;
-  font-family:"Geist Mono",monospace;font-size:8.5px;color:var(--faint)}
+.g-lane{flex:1;position:relative;height:26px;border-bottom:1px solid var(--hair-soft)}
+/* a barra do Gantt é o RAIL do card, deitado na linha do tempo */
+.g-bar{position:absolute;top:6px;height:14px;font-family:"Geist Mono",monospace;font-size:9.5px;
+  color:var(--txt);display:flex;align-items:center;padding:0 5px;overflow:hidden;white-space:nowrap;
+  cursor:default;min-width:3px;border-radius:2px;background:var(--shell)}
+.g-bar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--txt)}
+.g-bar.run::after{background:repeating-linear-gradient(90deg,var(--live) 0 8px,transparent 8px 14px);animation:railrun 1s linear infinite}
+.g-bar.run{color:var(--live)}
+.g-bar.hum{color:var(--hold)}
+.g-bar.hum::after{background:repeating-linear-gradient(90deg,var(--hold) 0 5px,transparent 5px 9px)}
+.g-in{margin-left:6px;color:var(--faint);font-size:9px}
+.g-bar.run .g-in{color:var(--live)}
+.g-dur{position:absolute;top:8px;margin-left:6px;font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint);white-space:nowrap}
+.g-axis{display:flex;justify-content:space-between;margin:4px 0 14px 108px;
+  font-family:"Geist Mono",monospace;font-size:9px;color:var(--faint)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--hair);border-radius:3px}
 </style>
 </head>
 <body data-theme="light">
-<div class="mesh"><div class="orb a"></div><div class="orb b"></div></div>
-<div class="grain"></div>
 
 <div class="app" id="app">
   <div class="shell side-l"><div class="core">
@@ -355,16 +391,22 @@ body{background:var(--bg);color:var(--txt);font-family:"Geist",ui-sans-serif,sys
 
   <div class="shell"><div class="core">
     <div class="strip">
-      <div class="chip btn ok" id="c-panl" title="mostrar/ocultar coluna do time (ctrl+B)">&#9703;</div>
+      <div class="chip btn icon ok" id="c-panl" title="mostrar/ocultar coluna do time (ctrl+B)">&#9703;</div>
       <div class="chip" id="c-session"><span class="d"></span>sessão <b>—</b></div>
       <div class="chip" id="c-tok" style="display:none">&Sigma; <b>0</b> tok</div>
       <span class="grow"></span>
-      <div class="chip btn" id="c-gantt">gantt</div>
-      <div class="chip btn" id="c-runs">runs</div>
-      <div class="chip btn ok" id="c-snd">som <b>on</b></div>
-      <div class="chip btn" id="c-theme">tema <b>dark</b></div>
-      <div class="chip btn" id="c-lang">PT-BR</div>
-      <div class="chip btn ok" id="c-panr" title="mostrar/ocultar coluna de atividade (ctrl+L)">&#9707;</div>
+      <div class="seg">
+        <div class="chip btn ok" id="c-flow">fluxo</div>
+        <div class="chip btn" id="c-gantt">gantt</div>
+        <div class="chip btn" id="c-runs">runs</div>
+      </div>
+      <div class="chip btn icon" id="c-more" title="som, tema, idioma">&#8943;</div>
+      <div class="menu" id="menu">
+        <div class="chip btn ok" id="c-snd">som <b>on</b></div>
+        <div class="chip btn" id="c-theme">tema <b>dark</b></div>
+        <div class="chip btn" id="c-lang">PT-BR</div>
+      </div>
+      <div class="chip btn icon ok" id="c-panr" title="mostrar/ocultar coluna de atividade (ctrl+L)">&#9707;</div>
     </div>
     <div class="stagewrap" id="wrap">
       <div class="stage" id="stage"><svg class="edges" id="edges"></svg></div>
@@ -586,7 +628,7 @@ setInterval(()=>{if(document.hidden)return;pcFrame=(pcFrame+1)%3;
   for(const e of PCS)if(e._on&&e.isConnected)e.innerHTML=pcSvg("pc"+pcFrame);},420);
 
 /* ================= layout from plan ================= */
-const CARD_W=176,COLW=240,X0=620,MIDY=340,ROWGAP=270; /* X0 abre espaco pra lounge a esquerda */
+const CARD_W=192,COLW=236,X0=600,MIDY=340,ROWGAP=236; /* X0 abre espaco pras baias a esquerda; ROWGAP = card + estacao + folga */
 let plan=null,steps=[],stepsById={},EDGES=[],SW=1600,SH=720,FLOWY={min:340,max:340};
 function computeLayout(p){
   steps=p.steps.map(s=>({...s,deps:s.deps||[],status:"pending"}));
@@ -835,6 +877,8 @@ function flashTitle(on){
 
 /* ================= actors ================= */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* movimento reduzido: o personagem aparece na mesa em vez de caminhar; sem bob */
+const RM=matchMedia("(prefers-reduced-motion: reduce)");
 function mkTok(role,x,y,mood,lead){
   const el=document.createElement("div");el.className="tok"+(lead?" lead":"");
   el.innerHTML=`<span class="hold-sp"></span><span class="badge">${role.replace("-intern","")}</span>`;
@@ -873,7 +917,7 @@ async function walk(t,x,y,speed){
   const d=Math.hypot(x-cx,y-cy);if(d<4)return;
   /* catch-up OU aba em segundo plano: teleporta — rAF congelado travaria a
      fila do papel no await e o estado ficaria para tras da run real */
-  if(!liveMode||document.hidden){stopMove(t);gsap.set(el,{left:x,top:y,y:0});return;}
+  if(!liveMode||document.hidden||RM.matches){stopMove(t);gsap.set(el,{left:x,top:y,y:0});return;}
   stopMove(t);gsap.set(el,{y:0});t.flip=x<cx;
   /* ciclo de 4 quadros com 3 desenhos (0-1-2-1), como no pack: o passo "neutro" no meio */
   const CYC=[0,1,2,1];let f=0,intr=false;setPose(t,"walk0");
@@ -883,7 +927,7 @@ async function walk(t,x,y,speed){
   clearInterval(iv);if(t._iv===iv)t._iv=null;
   if(!intr){t.flip=false;setPose(t,"stand");}
 }
-const bob=t=>{if(liveMode)gsap.to(t.el,{y:"-=3",duration:2,ease:"sine.inOut",yoyo:true,repeat:-1});};
+const bob=t=>{if(liveMode&&!RM.matches)gsap.to(t.el,{y:"-=3",duration:2,ease:"sine.inOut",yoyo:true,repeat:-1});};
 /* volta pra baia: caminha ate o assento da PROPRIA baia e senta de costas (AFK).
    Assento deriva da mesa da baia — mesma geometria de sentar da mesa do passo. */
 async function sitCouch(t){
@@ -904,10 +948,32 @@ setInterval(()=>{
 /* texto vindo dos hooks (comando, caminho, nota do Leader) e DADO, nunca markup.
    `grep '<Button>'` sumia do stream e um `<img onerror>` num comando executava. */
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function log(who,what,cls){
+/* grupo por passo: um cabeçalho (id · título · N ações) e as tool calls indentadas
+   abaixo. Interleaving de papéis abre um cabeçalho novo — a leitura é cronológica. */
+let lastGroup=null;const headEl={};
+function logHead(s){
   $("#empty")?.remove();
+  const h=document.createElement("div");
+  h.className="evh"+(s.status==="running"||s.status==="waiting"?" run":"")+(s.human?" hum":"");
+  h.dataset.step=s.id;
+  h.innerHTML=`<span class="hid">${esc(s.id)}</span><span class="ht" title="${esc(s.title)}">${esc(s.title)}</span><span class="hm"></span>`;
+  stream.appendChild(h);headEl[s.id]=h;lastGroup=s.id;headMeta(s);
+  if(liveMode)gsap.fromTo(h,{opacity:0},{opacity:1,duration:.4});
+  stream.scrollTop=stream.scrollHeight;
+}
+function headMeta(s){
+  const h=headEl[s.id];if(!h||!h.isConnected)return;
+  const run=s.status==="running"||s.status==="waiting";
+  h.classList.toggle("run",run);
+  const m=h.querySelector(".hm");
+  if(m)m.textContent=s.human?"":((s._tools||0)+" "+t("actions")+(run?"":" · "+gateTxt(s)));
+}
+function log(who,what,cls,step){
+  $("#empty")?.remove();
+  if(step){ if(lastGroup!==step.id||!headEl[step.id]||!headEl[step.id].isConnected)logHead(step); headMeta(step); }
+  else lastGroup=null;
   const e=document.createElement("div");
-  e.className="ev"+(cls?" "+cls:"")+(who==="leader"?" sys":"");
+  e.className="ev"+(cls?" "+cls:"")+(who==="leader"?" sys":"")+(step?" sub":"");
   e.innerHTML=`<span class="who">${esc(who)}</span><span class="what">${esc(what)}</span>`;
   stream.appendChild(e);
   while(stream.children.length>300)stream.firstChild.remove();
@@ -956,11 +1022,24 @@ async function patrol(){
 }
 
 /* ================= graph build (on plan) ================= */
+/* markup do card v2 — id · camada · estado / título / rail / métricas · quem.
+   Tamanho: largura fixa (CARD_W) e altura UNIFORME por run = a do card que mais
+   precisa (medida após render, em buildGraph). O título nunca corta. */
+const whoOf=s=>{if(s.human)return LANG==="pt"?"você":"you";const w=String(s.owner||"").replace("-intern","");
+  return String(s.layer||"").toLowerCase().includes(w)?"":w;}; /* "frontend · frontend" não diz nada */
+function cardHTML(s){
+  return `<div class="n-shell"><div class="n-core">
+      <div class="n-h"><span class="n-id">${esc(s.id)}</span><span class="n-lay">${esc(s.layer||"")}</span><span class="n-subs"></span><span class="n-dot"></span></div>
+      <div class="n-t" title="${esc(s.title)}">${esc(s.title)}</div>
+      <div class="n-rail"><i></i></div>
+      <div class="n-f"><span class="n-tm">—</span><span class="n-who">${esc(whoOf(s))}</span></div>
+      <div class="n-check">&#10003;</div></div></div>`;
+}
 function buildGraph(){
   computeLayout(plan);
   const buildEdges=()=>EDGES.forEach(([a,b])=>{
     const P=stepsById[a],Q=stepsById[b];
-    const x1=P.x+93,x2=Q.x-93,y1=P.y,y2=Q.y;
+    const x1=P.x+CARD_W/2+4,x2=Q.x-CARD_W/2-4,y1=P.y,y2=Q.y;
     let d;
     if(Q._c-P._c<=1){
       /* colunas vizinhas: o vao entre colunas e livre — curva direta e curta */
@@ -993,15 +1072,11 @@ function buildGraph(){
     const n=document.createElement("div");n.className="node"+(s.human?" humc":"");
     n.style.left=s.x+"px";n.style.top=s.y+"px";
     const hasIn=EDGES.some(([,b])=>b===s.id),hasOut=EDGES.some(([a])=>a===s.id);
-    n.innerHTML=`<div class="n-shell"><div class="n-core">
-      <div class="n-lay">${esc(s.layer||"")} <span class="n-subs"></span></div><div class="n-t" title="${esc(s.title)}">${esc(s.title)}</div>
-      <div class="n-f"><span class="n-tm">0s</span></div>
-      <div class="n-check">&#10003;</div></div></div>
-      ${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
+    n.innerHTML=cardHTML(s)+`${hasIn?'<span class="p-in"></span>':''}${hasOut?'<span class="p-out"></span>':''}`;
     stage.appendChild(n);nodeEl[s.id]=n;});
   /* altura uniforme = a do card que mais precisa (titulo nunca corta);
      SO DEPOIS o offset de centralizacao, em px exatos */
-  let core=100;
+  let core=78;
   steps.forEach(s=>{const n=nodeEl[s.id];if(!n)return;const c=n.querySelector(".n-core");
     if(!c)return;c.style.height="auto";core=Math.max(core,c.offsetHeight);});
   steps.forEach(s=>{const n=nodeEl[s.id];if(!n)return;
@@ -1009,7 +1084,7 @@ function buildGraph(){
   CORE_H=core;
   CARD_H=(nodeEl[steps[0].id]||{offsetHeight:120}).offsetHeight; /* altura REAL (core + moldura) */
   steps.forEach(s=>{const n=nodeEl[s.id];if(n)gsap.set(n,
-    {x:-88,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"});});
+    {x:-CARD_W/2,y:-CARD_H/2,opacity:0,scale:.86,filter:"blur(8px)"});});
   /* fonte web carrega depois: re-mede e re-centraliza (altura pode mudar).
      ATENCAO: este callback e ASSINCRONO — quando ele roda, `steps` ja pode ter
      passos SEM card em nodeEl (dinamicos do addDynStep herdam a geometria do
@@ -1020,7 +1095,7 @@ function buildGraph(){
   const cards=()=>steps.map(s=>nodeEl[s.id]).filter(Boolean);
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{
     const list=cards();if(!list.length)return;
-    let c2=100;
+    let c2=78;
     list.forEach(n=>{const c=n.querySelector(".n-core");if(!c)return;
       c.style.height="auto";c2=Math.max(c2,c.offsetHeight);});
     list.forEach(n=>{const c=n.querySelector(".n-core");if(c)c.style.height=c2+"px";});
@@ -1326,21 +1401,16 @@ function addGateStep(id,msg){
 function spawnCard(s,parent){
   const n=document.createElement("div");n.className="node dync"+(s.human?" humc":"");
   n.style.left=s.x+"px";n.style.top=s.y+"px";
-  n.innerHTML=`<div class="n-shell"><div class="n-core">
-    <div class="n-lay">${esc(s.layer||"")} <span class="n-subs"></span></div>
-    <div class="n-t" title="${esc(s.title)}">${esc(s.title)}</div>
-    <div class="n-f"><span class="n-tm">0s</span></div>
-    <div class="n-check">&#10003;</div></div></div>
-    <span class="p-in"></span>`;
+  n.innerHTML=cardHTML(s)+`<span class="p-in"></span>`;
   stage.appendChild(n);nodeEl[s.id]=n;
   n.querySelector(".n-core").style.height=CORE_H+"px";
-  gsap.set(n,{x:-88,y:-CARD_H/2,opacity:1});
+  gsap.set(n,{x:-CARD_W/2,y:-CARD_H/2,opacity:1});
   if(liveMode)gsap.from(n,{opacity:0,scale:.86,filter:"blur(8px)",duration:.8,ease:"power4.out"});
   if(parent){
     const pn=nodeEl[parent.id];
     if(pn&&!pn.querySelector(".p-out")){
       const sp=document.createElement("span");sp.className="p-out";pn.appendChild(sp);}
-    const x1=parent.x+93,x2=s.x-93,y1=parent.y,y2=s.y;
+    const x1=parent.x+CARD_W/2+4,x2=s.x-CARD_W/2-4,y1=parent.y,y2=s.y;
     const dx=Math.max(26,Math.min(72,(x2-x1)*.45));
     const p=document.createElementNS("http://www.w3.org/2000/svg","path");
     p.setAttribute("d",`M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`);
@@ -1365,8 +1435,8 @@ function renderSubs(parent){
   const done=subs.filter(q=>q.status==="done").length;
   const running=subs.some(q=>q.status==="running");
   el.classList.add("on");
-  el.textContent=done+"/"+subs.length+" extra"+(subs.length>1?"s":"");
-  el.title=subs.map(q=>(q.status==="done"?"✓ ":"● ")+q.title).join("\n");
+  el.textContent="+"+subs.length;
+  el.title=(LANG==="pt"?"correções: ":"fixes: ")+done+"/"+subs.length+"\n"+subs.map(q=>(q.status==="done"?"✓ ":"● ")+q.title).join("\n");
   n.classList.add("hasnotes"); /* card vira clicavel: dialog mostra os subprocessos */
 }
 
@@ -1519,7 +1589,7 @@ function route(e){
     EDGES.forEach(([a,b])=>{if(b===s.id)pathEl[a+">"+b].classList.add("lit");});
     cur.step=s;cur.gate=null;
     leader(t("monitoring")(role,s.id),true);
-    log(role.replace("-intern",""),t("started")(s.id,s.title));
+    logHead(s);
     focus(s.x,s.y+40,stepZoom());
     /* ---- VISUAL encadeado (so teatro) ---- */
     chain(role,async()=>{
@@ -1529,11 +1599,6 @@ function route(e){
         await walk(tk,SEAT(s).x,SEAT(s).y);
         stopMove(tk);setPose(tk,"sitback");tk.el.classList.add("busy");
         charStep[role]=s;
-        if(liveMode&&s.status==="running"&&!s._pr){
-          const pr=document.createElement("div");pr.className="pulse";
-          pr.style.left=(SEAT(s).x-10)+"px";pr.style.top=(SEAT(s).y-8)+"px";stage.appendChild(pr);
-          gsap.fromTo(pr,{opacity:.65,scale:1},{opacity:0,scale:2.1,duration:1.6,ease:"power2.out",repeat:-1});
-          s._pr=pr;}
       }
     });return;}
   if((e.ev==="PreToolUse")&&(e.aid||e.agent)){
@@ -1543,10 +1608,10 @@ function route(e){
       if(e.sub)lastDispatch[e.sub]=String(e.info||"").replace(/^[a-z-]+\s*:\s*/i,"");
       log("leader",t("dispatched")+(e.info||e.sub||""));return;}
     const line=(e.tool||"")+" "+shortPath(e.info);
-    log(who,line);
+    const st=aidStep[e.aid];if(st){st._tools=(st._tools||0)+1;st._lastEv=e.t||Date.now();}
+    log(who,line,"",st);
     think(role,line);
     { const tk=toks[role]; if(tk) tk._read=/^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead)$/.test(e.tool||""); }
-    const st=aidStep[e.aid];if(st){st._tools=(st._tools||0)+1;st._lastEv=e.t||Date.now();}
     return;}
   if(e.ev==="PreToolUse"){ /* leader (sem aid) — rota REAL dos dispatches do Leader */
     if(e.tool==="Task"||e.tool==="Agent"){
@@ -1576,7 +1641,7 @@ function route(e){
       if(n0&&!s._dyn){n0.classList.remove("active");n0.classList.add("done");
         gsap.to(n0.querySelector(".n-check"),{opacity:1,scale:1,duration:.4});}
       updCnt();
-      log(role.replace("-intern",""),t("finished")(s.id),"rep");
+      log(role.replace("-intern",""),t("finished")(s.id),"rep",s);
       chain(role,async()=>{const tk=toks[role];if(tk)tk.el.classList.remove("busy");});
       return;}
     /* ---- LOGICA sincrona ---- */
@@ -1600,7 +1665,7 @@ function route(e){
     }
     updCnt();
     lastDone=s;
-    log(role.replace("-intern",""),t("finished")(s.id),"rep");
+    log(role.replace("-intern",""),t("finished")(s.id),"rep",s);
     if(!steps.some(x=>!x.human&&x.owner===role&&x.status==="running")&&rowEl[role])
       rowEl[role].classList.remove("act");
     if(cur.step===s){cur.step=null;leader(t("consolidating"),false);}
@@ -1639,7 +1704,7 @@ function route(e){
           const b=document.createElement("button");
           b.className="n-note";b.setAttribute("aria-label","veredito do leader");
           b.onclick=ev=>{ev.stopPropagation();openNotes(s);b.classList.add("read");};
-          n.querySelector(".n-core").appendChild(b);
+          n.appendChild(b);
         }
         if(liveMode)focus(s.x,s.y+40,stepZoom());
       }
@@ -1818,10 +1883,23 @@ $("#c-runs").onclick=async()=>{
 
 /* ================= gantt / timeline por papel ================= */
 let ganttOn=false,ganttIv=null;
+function setGantt(on){
+  ganttOn=on;
+  $("#gantt").classList.toggle("on",ganttOn);
+  $("#c-gantt").classList.toggle("ok",ganttOn);
+  $("#c-flow").classList.toggle("ok",!ganttOn);
+  if(ganttOn){renderGantt();ganttIv=setInterval(renderGantt,1000);}
+  else if(ganttIv){clearInterval(ganttIv);ganttIv=null;}
+}
+$("#c-flow").onclick=()=>setGantt(false);
+/* menu ⋯ (som, tema, idioma): fecha ao clicar fora */
+$("#c-more").onclick=e=>{e.stopPropagation();$("#menu").classList.toggle("on");};
+addEventListener("click",e=>{if(!e.target.closest("#menu"))$("#menu").classList.remove("on");});
 $("#c-gantt").onclick=()=>{
   ganttOn=!ganttOn;
   $("#gantt").classList.toggle("on",ganttOn);
   $("#c-gantt").classList.toggle("ok",ganttOn);
+  $("#c-flow").classList.toggle("ok",!ganttOn);
   if(ganttOn){renderGantt();ganttIv=setInterval(renderGantt,1000);}
   else if(ganttIv){clearInterval(ganttIv);ganttIv=null;}
 };
@@ -1843,7 +1921,10 @@ function renderGantt(){
       const a=(s._start-t0)/span*100,b=((s._end||nowT())-t0)/span*100;
       const cls=s.human?" hum":(s.status==="running"||s.status==="waiting")?" run":"";
       const tip=`${s.id} — ${s.title} (${fmt((s._end||nowT())-s._start)}${s._tok?" · "+fmtTok(s._tok)+" tok":""})`;
-      bars+=`<div class="g-bar${cls}" style="left:${a}%;width:${Math.max(.4,b-a)}%" title="${tip.replace(/"/g,"&quot;")}">${s.id}</div>`;
+      const w=Math.max(.4,b-a);
+      const du=fmt((s._end||nowT())-s._start);
+      bars+=`<div class="g-bar${cls}" style="left:${a}%;width:${w}%" title="${tip.replace(/"/g,"&quot;")}">${esc(s.id)}${w>9?`<span class="g-in">${du}</span>`:""}</div>`
+        +(w>9?"":`<span class="g-dur" style="left:${a+w}%">${du}</span>`);
     });
     html+=`<div class="g-row"><div class="g-name">${role.replace("-intern","")}</div><div class="g-lane">${bars}</div></div>`;
   });
@@ -1863,7 +1944,7 @@ function fullReset(){
   for(const k in lastDispatch)delete lastDispatch[k];
   for(const k in reconSeen)delete reconSeen[k];
   totalTok=0;updTok();evN=0;$("#ec").textContent="0";
-  stream.innerHTML="";
+  stream.innerHTML="";lastGroup=null;for(const k in headEl)delete headEl[k];
   edgesSvg.innerHTML="";
   if(ganttOn)renderGantt();
 }
@@ -1956,7 +2037,7 @@ applyLang();connect();fit();
 window.tv={
   get steps(){return steps},get charStep(){return charStep},
   get aidStep(){return aidStep},get aidRole(){return aidRole},
-  get evlog(){return EV_LOG},
+  get evlog(){return EV_LOG},focus,
   dump(){console.table(steps.map(s=>({id:s.id,status:s.status,owner:s.owner,
     tools:s._tools||0,charHere:Object.entries(charStep).find(([,v])=>v&&v.id===s.id)?.[0]||""})));
     console.log("charStep:",Object.fromEntries(Object.entries(charStep).map(([k,v])=>[k,v&&v.id])));
