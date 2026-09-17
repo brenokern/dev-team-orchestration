@@ -121,7 +121,7 @@ rep_between(".node{position:absolute;width:176px;opacity:0}", ".node.humc.active
 .node.done .n-tm{color:var(--txt)}
 .node.humc.active .n-tm{color:var(--hold)}
 .n-who{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--faint);flex:0 1 auto;min-width:0}
-.n-who:empty{display:none}
+.n-who:empty,.node.done .n-who{display:none} /* concluído: quem fez já está no roster/stream */
 .n-check{position:absolute;top:7px;right:9px;width:14px;height:14px;border-radius:50%;
   background:var(--hair);display:grid;place-items:center;font-size:8px;color:var(--txt);
   opacity:0;transform:scale(.5)}
@@ -131,7 +131,7 @@ rep_between(".node{position:absolute;width:176px;opacity:0}", ".node.humc.active
 .node.hasnotes{cursor:pointer}
 .node.hasnotes:hover .n-core{border-color:var(--edge-past)}
 /* notificação de veredito do leader no card */
-.n-note{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;
+.n-note{position:absolute;top:-6px;right:-6px;width:12px;height:12px;border-radius:50%; /* centro no canto, sobressai */
   background:#e24b4a;border:1.5px solid var(--core-2);cursor:pointer;padding:0;z-index:3;
   pointer-events:auto;animation:notep 1.6s ease-in-out 3}
 @keyframes notep{50%{transform:scale(1.35)}}
@@ -466,6 +466,10 @@ rep("""      bars+=`<div class="g-bar${cls}" style="left:${a}%;width:${w}%" titl
 """      const du=fmt((s._end||nowT())-s._start);
       bars+=`<div class="g-bar${cls}" style="left:${a}%;width:${w}%" title="${tip.replace(/"/g,"&quot;")}">${esc(s.id)}${w>9?`<span class="g-in">${du}</span>`:""}</div>`
         +(w>9?"":`<span class="g-dur" style="left:${a+w}%">${du}</span>`);""")
+
+# etiqueta do personagem: abaixo dos pés, nunca sob o sprite
+rep(""".tok .badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:-6px;""",
+    """.tok .badge{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:1px;z-index:1;""")
 
 # depuracao/screenshots: expoe focus() no window.tv (read-only, sem efeito em producao)
 rep("  get evlog(){return EV_LOG},", "  get evlog(){return EV_LOG},focus,")
