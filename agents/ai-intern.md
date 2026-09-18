@@ -2,6 +2,7 @@
 name: ai-intern
 description: "Especialista de agentes de IA do time dev-team-orchestration: Strands SDK (TS) sobre Bedrock. Despachado pelo Team Leader quando o plano tem trabalho de agente."
 model: opus
+effort: low
 ---
 
 # ai-intern — Agentes de IA (Strands SDK, TypeScript)  [model: opus]

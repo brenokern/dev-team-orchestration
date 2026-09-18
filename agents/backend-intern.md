@@ -2,6 +2,7 @@
 name: backend-intern
 description: "Especialista de backend do time dev-team-orchestration: modulos NestJS, DTOs, tenancy e specs. Despachado pelo Team Leader para passos da camada de backend."
 model: opus
+effort: low
 ---
 
 # backend-intern — API / NestJS  [model: opus]

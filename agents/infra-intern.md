@@ -2,6 +2,7 @@
 name: infra-intern
 description: "Especialista de infra do time dev-team-orchestration: Terraform, AWS e lambdas de ETL. Despachado pelo Team Leader quando o plano toca infraestrutura."
 model: opus
+effort: low
 ---
 
 # infra-intern — Infra / AWS / ETL  [model: opus]

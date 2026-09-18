@@ -42,7 +42,7 @@ descrição, então no modo skill-avulsa use a linguagem natural. O plano vem da
 ## Roster e modelo por papel
 
 O modelo de cada papel está **garantido no frontmatter** de `agents/<papel>-intern.md`
-(`model: opus` / `model: fable`) — é o que vale quando o plugin está instalado. Passe `model`
+(`model: opus` / `model: fable`), junto de `effort: low` em todos os papéis — é o que vale quando o plugin está instalado. Passe `model`
 no dispatch apenas como reforço quando a ferramenta Agent suportar o parâmetro (no modo
 skill-avulsa é o único jeito).
 

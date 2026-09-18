@@ -2,6 +2,7 @@
 name: pr-writer-intern
 description: "Escreve o TLDR do PR a partir dos commits locais da branch. Nunca da push nem abre o PR."
 model: opus
+effort: low
 ---
 
 # pr-writer-intern — TLDR do PR  [model: opus]
