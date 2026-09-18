@@ -238,6 +238,9 @@ for fechado antes disso, o hook `SessionEnd` faz a mesma limpeza.
 
 ## Reuso de skills pelos especialistas
 - `frontend-intern` → `taste-skill`, `ui-ux-pro-max` para UI (se instaladas).
+  Texto de interface segue `references/human-writing/` (skill `human-writing` vendorizada no
+  plugin, MIT): microcopy só passa pela limpeza lexical; texto explicativo passa pelo pipeline
+  inteiro. Travessão e meia-risca proibidos em string visível.
 - `ux-intern` → `design:design-critique`, `design:accessibility-review`, `ui-ux-pro-max`.
 - `ai-intern` → premissas do **Strands SDK** (strandsagents.com) + `claude-code-guide` (Claude
   Agent SDK / Claude API); o Leader pode invocar o agente `claude-code-guide` pra dúvidas.

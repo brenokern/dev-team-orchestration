@@ -33,6 +33,48 @@ Para layout, hierarquia, estados e polish, invoque `taste-skill` e `ui-ux-pro-ma
 instaladas). Os padrões visuais do projeto (Tailwind 4, Radix/shadcn, componentes existentes) e
 a regra de cores acima **prevalecem** em conflito.
 
+## Texto de interface: human-writing vendorizado (obrigatório)
+Todo texto que você escreve na tela é lido por gente: título, subtítulo, label, placeholder,
+empty state, toast, mensagem de erro, tooltip, texto de ajuda, e-mail transacional, onboarding.
+A skill `human-writing` está vendorizada em `references/human-writing/HUMAN-WRITING.md` (com
+`references/humanize-vendored.md`, `checklist.md`, `movimentos.md`). Rode-a em **modo
+embutido**: tudo internamente, só a prosa final vai para o código. As regras que valem sempre:
+
+**Calibre pelo gênero (Portão 0).** Microcopy (label, botão, placeholder, toast, erro) só passa
+pelo Portão 5. Texto que explica ou convence (empty state, onboarding, ajuda, e-mail, modal de
+decisão) passa pelo pipeline inteiro: um ABT de uma linha (E / MAS / PORTANTO) antes de
+escrever, frases-tópico antes dos parágrafos, contra-argumento antes de qualquer "faça X".
+
+**Sem travessão nem meia-risca, nunca.** Nem em título, nem em tabela, nem em string de i18n.
+Vírgula, dois-pontos, parênteses ou frase nova. Antes de commitar, procure de fato:
+```bash
+grep -rn '[—–]\|--' apps/frontend/src --include=*.tsx --include=*.ts | grep -v '^.*//' 
+```
+(qualquer ocorrência em string visível ao usuário é entrega reprovada; `--` em código e em
+comentário não conta).
+
+**Vocabulário (Portão 5), o que mais aparece em UI em pt-BR:** corte "crucial", "fundamental",
+"robusto", "relevante", "desafiador", "promissor", "de forma eficaz", "amplo leque de", "vale
+ressaltar", "é importante destacar", "não apenas X, mas também Y", "no cenário atual", e o
+empilhamento de gerúndio ("garantindo", "proporcionando", "permitindo"). Nada de tricolon
+automático em subtítulo ("rápido, simples e seguro"), nada de emoji decorativo, nada de
+Title Case Em Cada Palavra. Sujeito é quem age, verbo é a ação: "Você ainda não cadastrou
+clientes" em vez de "Nenhum cliente foi cadastrado no sistema até o momento".
+
+**Erro e empty state têm o mesmo formato:** o que aconteceu (fato, sem inflar), o que a pessoa
+pode fazer agora (uma ação, com o botão dizendo o verbo), e nada de tom de desculpa
+teatral. "Não conseguimos salvar. Verifique a conexão e tente de novo." resolve; "Ops! Algo
+deu errado :(" não.
+
+**Não invente fato.** Número, prazo, nome de plano ou regra de negócio no texto vêm do plano
+ou do contrato do backend; se não vieram, escreva a versão sem o dado e reporte a lacuna.
+
+**Dado antes de novo.** Em texto de mais de uma frase, cada frase abre com o que o leitor já
+tem e termina com o que é novo. É o que faz "fluir"; violar isso é o que faz "parecer IA".
+
+Conflito entre esta seção e `BRANDING_CONTEXT.md`/glossário do produto: o glossário do produto
+vence no **termo** (nome de tela, de entidade, de plano); esta seção vence na **frase**.
+
 ## Sua lane
 - `apps/frontend/**` — page, componentes, hooks, `src/lib/api/**`, sidebar
 Não toque em backend nem prisma.
